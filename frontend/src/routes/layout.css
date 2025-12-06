@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@font-face {
+    font-family: "Cascadia Code";
+    src: url("/fonts/CascadiaCode-VariableFont_wght.ttf");
+    font-weight: 100 900;
+}
+
+@font-face {
+    font-family: "Cascadia Code Italic";
+    src: url("/fonts/CascadiaCode-Italic-VariableFont_wght.ttf");
+    font-weight: 100 900;
+}
+
+@theme {
+    --default-font-family: "Cascadia Code", sans-serif;
+    --font-cascadia: "Cascadia Code";
+    --font-cascadia-italic: "Cascadia Code Italic";
+    --color-teal: #00afc3;
+    --color-deep-blue: #171834;
+    --color-pink: #ff52f9;
+    --color-indigo: #8099ff;
+    --color-dark-teal: #007694;
+    --color-dark-blue: #474a9f;
+    --color-dark-pink: #bf00b9;
+    --color-blue: #005ff1;
+}
