@@ -6,7 +6,7 @@ from typing import AsyncIterator
 
 from fastapi import FastAPI
 
-from app.api.subroutes import router as api_router
+from app.api.subroutes.pastes import pastes_route
 from app.containers import Container
 
 
@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     app = FastAPI(title="DevBins API", version="0.1.0", lifespan=lifespan)
-    app.include_router(api_router)
+    app.include_router(pastes_route)
     return app
 
 

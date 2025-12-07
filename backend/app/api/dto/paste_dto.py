@@ -2,13 +2,14 @@ from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel, Field, field_validator
+from pydantic.v1 import UUID4
 
 
 class PasteContentLanguage(str, Enum):
-    plain_text = "Plain Text"
+    plain_text = "plain_text"
 
 
-class PasteCreate(BaseModel):
+class CreatePaste(BaseModel):
     title: str = Field(
         min_length=1,
         max_length=255,
@@ -21,7 +22,8 @@ class PasteCreate(BaseModel):
     )
     content_language: PasteContentLanguage = Field(
         description="The language of the content",
-        default=PasteContentLanguage.plain_text
+        default=PasteContentLanguage.plain_text,
+        examples=["plain_text"]
     )
     expires_at: datetime | None = Field(None,
                                         description="The datetime the Paste should expire (None = Never) Note: No guarantee given!")
@@ -34,14 +36,17 @@ class PasteCreate(BaseModel):
 
 
 class PasteResponse(BaseModel):
-    id: str = Field(
+    id: UUID4 = Field(
         description="The unique identifier of the paste",
     )
     title: str = Field(
         description="The title of the paste",
     )
-    content_url: str = Field(
-        description="The url to the content of the paste",
+    content: str = Field(
+        description="The content of the paste",
+    )
+    content_language: PasteContentLanguage = Field(
+        description="The language of the content",
     )
     expires_at: datetime | None = Field(None,
                                         description="The number of hours until the paste expires (0 = never) Note: No guarantee given!")
