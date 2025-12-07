@@ -1,6 +1,11 @@
 from datetime import datetime
+from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+class PasteContentLanguage(str, Enum):
+    plain_text = "Plain Text"
 
 
 class PasteCreate(BaseModel):
@@ -11,12 +16,21 @@ class PasteCreate(BaseModel):
     )
     content: str = Field(
         min_length=1,
+        max_length=10000,
         description="The content of the paste",
     )
-    expires_in_hours: int = Field(0,
-                                  ge=0,
-                                  le=8760,
-                                  description="The number of hours until the paste expires (0 = never) Note: No guarantee given!")
+    content_language: PasteContentLanguage = Field(
+        description="The language of the content",
+        default=PasteContentLanguage.plain_text
+    )
+    expires_at: datetime | None = Field(None,
+                                        description="The datetime the Paste should expire (None = Never) Note: No guarantee given!")
+
+    @field_validator('expires_at')
+    def validate_expires_in(cls, v):
+        if v is not None and v <= datetime.now():
+            raise ValueError('expires_in must be in the future')
+        return v
 
 
 class PasteResponse(BaseModel):

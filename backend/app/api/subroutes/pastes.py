@@ -1,10 +1,10 @@
 from fastapi import APIRouter
 
-app = APIRouter(
+pastes_route = APIRouter(
     prefix="/pastes",
 )
 
-@app.post("")
+@pastes_route.post("")
 async def create_paste(
 
 ):
