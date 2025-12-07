@@ -6,7 +6,7 @@ from typing import AsyncIterator
 
 from fastapi import FastAPI
 
-from app.api.routes import router as api_router
+from app.api.subroutes import router as api_router
 from app.containers import Container
 
 
