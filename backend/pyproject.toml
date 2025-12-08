@@ -16,6 +16,7 @@ dependencies = [
     "setuptools>=68",
     "wheel>=0.45.1",
     "alembic>=1.17.2",
+    "slowapi>=0.1.9",
 ]
 [project.optional-dependencies]
 migrations = [

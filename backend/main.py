@@ -5,11 +5,12 @@ from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 from fastapi import FastAPI
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.api.middlewares import UserMetadataMiddleware
-from app.api.routes import router
-from app.api.subroutes.pastes import pastes_route
 from app.containers import Container
+from app.ratelimit import limiter
 
 
 def _build_container() -> Container:
@@ -39,8 +40,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await container.shutdown_resources()
 
 
+def apply_rate_limiter(app: FastAPI):
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
 def create_app() -> FastAPI:
+    from app.api.routes import router
     app = FastAPI(title="DevBins API", version="0.1.0", lifespan=lifespan)
+    apply_rate_limiter(app)
     app.add_middleware(UserMetadataMiddleware)
     app.include_router(router)
     return app
