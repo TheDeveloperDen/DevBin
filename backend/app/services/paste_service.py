@@ -2,16 +2,12 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime
-from http.client import HTTPResponse
 from os import path
-from typing import Any
-from warnings import catch_warnings
 
 import aiofiles
 from aiofiles import os
 from fastapi import HTTPException
-from sqlalchemy import text, select
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from app.api.dto.paste_dto import CreatePaste, PasteResponse, PasteContentLanguage
@@ -19,12 +15,11 @@ from app.api.dto.user_meta_data import UserMetaData
 from app.db.models import PasteEntity
 
 
-class PasteServiuce:
-    def __init__(self, session: sessionmaker, paste_base_url: str = "http://localhost:8000",
+class PasteService:
+    def __init__(self, session: sessionmaker,
                  paste_base_folder_path: str = ""):
         self.session_maker = session
-        self.paste_base_url = paste_base_url  # like https://mydomain.com/p/
-        self.paste_base_folder_path = paste_base_folder_path  # if it is in a subfolder
+        self.paste_base_folder_path = paste_base_folder_path  # if it is in a subfolder of the project
         self.logger = logging.getLogger(self.__class__.__name__)
 
     async def _read_content(self, paste_path: str) -> str:
@@ -33,10 +28,7 @@ class PasteServiuce:
                 return await f.read()
         except Exception as exc:
             self.logger.error("Failed to read paste content: %s", exc)
-            raise HTTPException(
-                status_code=404,
-                detail="Paste not found",
-            ) from exc
+            return None
 
     async def _save_content(self, paste_id: str, content: str) -> str | None:
         try:
@@ -113,6 +105,7 @@ class PasteServiuce:
         except Exception as exc:
             self.logger.error("Failed to create paste: %s", exc)
             await session.rollback()
+            await self._remove_file(paste_path)
             raise HTTPException(
                 status_code=500,
                 detail="Failed to create paste",

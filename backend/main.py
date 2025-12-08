@@ -6,6 +6,8 @@ from typing import AsyncIterator
 
 from fastapi import FastAPI
 
+from app.api.middlewares import UserMetadataMiddleware
+from app.api.routes import router
 from app.api.subroutes.pastes import pastes_route
 from app.containers import Container
 
@@ -18,6 +20,7 @@ def _build_container() -> Container:
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/postgres",
     )
     container.config.db.echo.from_env("SQLALCHEMY_ECHO", as_=bool, default=False)
+    container.config.paste.paste_base_folder_path.from_env("DD_PASTE_BASE_FOLDER_PATH", default="./files")
     return container
 
 
@@ -38,7 +41,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     app = FastAPI(title="DevBins API", version="0.1.0", lifespan=lifespan)
-    app.include_router(pastes_route)
+    app.add_middleware(UserMetadataMiddleware)
+    app.include_router(router)
     return app
 
 
@@ -46,7 +50,12 @@ def create_app() -> FastAPI:
 app = create_app()
 
 
-if __name__ == "__main__":
+def main():
     import uvicorn
 
-    uvicorn.run("main:app", host=os.getenv("HOST", "0.0.0.0"), port=int(os.getenv("PORT", "8000")), reload=os.getenv("RELOAD", "true").lower() == "true")
+    uvicorn.run("main:app", host=os.getenv("HOST", "0.0.0.0"), port=int(os.getenv("PORT", "8000")),
+                reload=os.getenv("RELOAD", "true").lower() == "true")
+
+
+if __name__ == "__main__":
+    main()

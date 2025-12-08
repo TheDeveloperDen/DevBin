@@ -1,8 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, Field, field_validator
-from pydantic.v1 import UUID4
+from pydantic import BaseModel, Field, field_validator, UUID4
 
 
 class PasteContentLanguage(str, Enum):
@@ -42,8 +41,8 @@ class PasteResponse(BaseModel):
     title: str = Field(
         description="The title of the paste",
     )
-    content: str = Field(
-        description="The content of the paste",
+    content: str | None = Field(
+        description="The content of the paste, possible null if the content couldnt be read.",
     )
     content_language: PasteContentLanguage = Field(
         description="The language of the content",
