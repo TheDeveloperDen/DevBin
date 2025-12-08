@@ -3,6 +3,8 @@ from enum import Enum
 
 from pydantic import BaseModel, Field, field_validator, UUID4
 
+from app.config import config
+
 
 class PasteContentLanguage(str, Enum):
     plain_text = "plain_text"
@@ -16,13 +18,13 @@ class CreatePaste(BaseModel):
     )
     content: str = Field(
         min_length=1,
-        max_length=10000,
+        max_length=config.MAX_CONTENT_LENGTH,
         description="The content of the paste",
     )
     content_language: PasteContentLanguage = Field(
         description="The language of the content",
         default=PasteContentLanguage.plain_text,
-        examples=["plain_text"]
+        examples=[PasteContentLanguage.plain_text]
     )
     expires_at: datetime | None = Field(None,
                                         description="The datetime the Paste should expire (None = Never) Note: No guarantee given!")

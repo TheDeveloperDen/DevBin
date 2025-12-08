@@ -15,13 +15,6 @@ from app.ratelimit import limiter
 
 def _build_container() -> Container:
     container = Container()
-    # Configure from environment with sensible defaults
-    container.config.db.url.from_env(
-        "DATABASE_URL",
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/postgres",
-    )
-    container.config.db.echo.from_env("SQLALCHEMY_ECHO", as_=bool, default=False)
-    container.config.paste.paste_base_folder_path.from_env("DD_PASTE_BASE_FOLDER_PATH", default="./files")
     return container
 
 

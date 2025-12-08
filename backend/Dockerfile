@@ -1,5 +1,5 @@
 FROM python:3.13-slim
-
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 ENV PORT=8000
 
 # Set the working directory in the container
@@ -14,11 +14,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies using uv
-RUN pip install uv
-RUN uv pip install --system --no-cache-dir -e .
+RUN uv sync
 
 # Expose the port the app runs on
-EXPOSE PORT
+EXPOSE $PORT
 
 # Command to run the application
 CMD ["python", "main.py"]

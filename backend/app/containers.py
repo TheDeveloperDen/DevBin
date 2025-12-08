@@ -7,6 +7,8 @@ from dependency_injector import containers, providers
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.config import get_config
+
 
 @asynccontextmanager
 async def _engine_resource(db_url: str, echo: bool = False) -> AsyncIterator[AsyncEngine]:
@@ -34,13 +36,13 @@ class Container(containers.DeclarativeContainer):
         "app.dependencies.db",
     ])
 
-    config = providers.Configuration(name="config")
+    config = providers.Callable(get_config)
 
     # Database engine (async) as a managed resource
     engine = providers.Resource(
         _engine_resource,
-        db_url=config.db.url,
-        echo=config.db.echo.as_(bool),
+        db_url=config().DATABASE_URL,
+        echo=config().SQLALCHEMY_ECHO,
     )
 
     # SQLAlchemy session factory
@@ -60,5 +62,5 @@ class Container(containers.DeclarativeContainer):
     paste_service = providers.Factory(
         PasteService,
         session_factory,
-        config.paste.paste_base_folder_path
+        config().BASE_FOLDER_PATH
     )

@@ -1,5 +1,6 @@
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
+from pydantic import UUID4
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -17,11 +18,13 @@ pastes_route = APIRouter(
 @pastes_route.get("/{paste_id}")
 @limiter.limit("10/minute")
 @inject
-async def get_paste(request: Request, paste_id: str,
+async def get_paste(request: Request, paste_id: UUID4,
                     paste_service: PasteService = Depends(Provide[Container.paste_service])):
+    paste_result = await paste_service.get_paste_by_id(paste_id)
     return Response(
-        await paste_service.get_paste_by_id(paste_id),
+        paste_result.model_dump_json(),
         headers={
+            "Content-Type": "application/json",
             "Cache-Control": "public, max-age=3600",
         }
     )
