@@ -2,6 +2,8 @@ name: devbin
 
 services:
   app:
+    env_file:
+      - .env
     build: backend/.
     ports:
       - "8000:8000"
@@ -15,6 +17,8 @@ services:
       devbin_db:
         condition: service_healthy
   devbin_db:
+    env_file:
+      - .env
     image: postgres:16
     environment:
       POSTGRES_USER: postgres
