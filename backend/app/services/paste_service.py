@@ -7,6 +7,7 @@ from os import path
 import aiofiles
 from aiofiles import os
 from fastapi import HTTPException
+from pydantic import UUID4
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
@@ -49,7 +50,7 @@ class PasteService:
         except Exception as exc:
             self.logger.error("Failed to remove file %s: %s", paste_path, exc)
 
-    async def get_paste_by_id(self, paste_id: str) -> PasteResponse | None:
+    async def get_paste_by_id(self, paste_id: UUID4) -> PasteResponse | None:
         async with self.session_maker() as session:
             stmt = select(PasteEntity).where(PasteEntity.id == paste_id).limit(1)
             result: PasteEntity | None = (await session.execute(stmt)).scalar_one_or_none()

@@ -37,7 +37,6 @@ class Container(containers.DeclarativeContainer):
     ])
 
     config = providers.Callable(get_config)
-
     # Database engine (async) as a managed resource
     engine = providers.Resource(
         _engine_resource,

@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import logging
 import os
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 from fastapi import FastAPI
+from fastapi.responses import ORJSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.api.middlewares import UserMetadataMiddleware
+from app.config import get_config
 from app.containers import Container
 from app.ratelimit import limiter
 
@@ -40,12 +43,19 @@ def apply_rate_limiter(app: FastAPI):
 
 def create_app() -> FastAPI:
     from app.api.routes import router
-    app = FastAPI(title="DevBins API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(
+        title="DevBins API",
+        version="0.1.0",
+        lifespan=lifespan,
+        default_response_class=ORJSONResponse
+    )
     apply_rate_limiter(app)
     app.add_middleware(UserMetadataMiddleware)
     app.include_router(router)
     return app
 
+
+logging.info(get_config().DATABASE_URL)
 
 # Expose ASGI app
 app = create_app()

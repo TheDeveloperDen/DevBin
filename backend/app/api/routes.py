@@ -20,7 +20,7 @@ router = APIRouter()
 async def health(
         request: Request,
         health_service: HealthService = Depends(Provide[Container.health_service]),
-) -> dict[str, Any]:
+):
     return await health_service.check()
 
 
