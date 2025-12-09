@@ -15,7 +15,7 @@ router = APIRouter()
 
 
 @router.get("/health")
-@limiter.limit("10/minute")
+@limiter.limit("60/minute")
 @inject
 async def health(
         request: Request,

@@ -9,12 +9,14 @@ WORKDIR /app
 # Copy the project files
 COPY . .
 
+COPY alembic.docker.ini alembic.ini
+
 # Install system dependencies (if any)
 RUN apt-get update && apt-get install -y \
     curl \
     gcc \
     && rm -rf /var/lib/apt/lists/*  \
-    && uv sync # Install Python dependencies using uv
+    && uv sync --extra migrations # Install Python dependencies using uv
 
 # Expose the port the app runs on
 EXPOSE $PORT

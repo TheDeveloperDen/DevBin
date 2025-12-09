@@ -1,5 +1,3 @@
-alembic.ini
-alembic/
-
 files/
 .venv/
+alembic.ini
