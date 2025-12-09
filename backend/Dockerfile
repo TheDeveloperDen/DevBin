@@ -11,12 +11,15 @@ COPY . .
 
 # Install system dependencies (if any)
 RUN apt-get update && apt-get install -y \
+    curl \
     gcc \
     && rm -rf /var/lib/apt/lists/*  \
     && uv sync # Install Python dependencies using uv
 
 # Expose the port the app runs on
 EXPOSE $PORT
+
+HEALTHCHECK --interval=5s --timeout=5s --start-period=3s --retries=3 CMD curl -f http://localhost:"$PORT"/health || exit 1
 
 # Command to run the application
 CMD ["uv", "run", "main.py"]
