@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -9,13 +10,21 @@ from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from uuid import UUID
 
 from app.api.middlewares import UserMetadataMiddleware
 from app.config import get_config
 from app.containers import Container
 from app.ratelimit import limiter
 
+# Custom JSON encoder for UUID
+class UUIDEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, UUID):
+            return str(obj)
+        return super().default(obj)
 
+# Set the custom encoder
 def _build_container() -> Container:
     container = Container()
     return container
@@ -54,8 +63,6 @@ def create_app() -> FastAPI:
     app.include_router(router)
     return app
 
-
-logging.info(get_config().DATABASE_URL)
 
 # Expose ASGI app
 app = create_app()
