@@ -21,8 +21,8 @@ A simple pastebin service written in Python using FastAPI for the Backend and us
 > Note: You maybe required to use docker-compose instead of docker compose depending on your docker version
 
 1. Clone the repository
-2. Copy the `.env.example` to `.env` and update the values
-   2.1. Run `docker compose up -d`
-   2.2. Run migrations with `docker compose run --rm app uv run alembic upgrade head`
+2. Copy the `.env.example` to `.env` and update the values.   
+   2.1. Run `docker compose up -d`  
+   2.2. Run migrations with `docker compose run --rm app uv run alembic upgrade head`  
 3. Check http://localhost:8000/docs for the Swagger docs in your browser
 4. Run `docker compose down` to stop the service
