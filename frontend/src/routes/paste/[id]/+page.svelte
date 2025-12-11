@@ -60,7 +60,7 @@
     {/if}
     {#if data?.error}
         <div
-            class="p-2 rounded-lg border border-green-400 bg-green-500/20 text-green-500 mb-2"
+            class="p-2 rounded-lg border border-red-400 bg-red-500/20 text-red-500 mb-2"
         >
             {data?.error}
         </div>

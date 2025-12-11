@@ -10,6 +10,10 @@ export async function load({ params }) {
       },
     });
 
+    if (!response.data) {
+      return { error: "Paste not found or is currently unavailable" };
+    }
+
     if (response.error) {
       console.log(response.error);
       return { error: response.error?.detail };
