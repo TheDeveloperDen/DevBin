@@ -25,3 +25,23 @@
     --color-dark-pink: #bf00b9;
     --color-blue: #005ff1;
 }
+
+@layer base {
+    html {
+        @apply dark:text-neutral-200 text-black bg-neutral-300 dark:bg-neutral-900;
+    }
+}
+
+@layer components {
+    .input {
+        @apply min-h-10 p-2 outline-none border-neutral-400 dark:border-neutral-600 border-2 focus-within:border-blue focus-within:ring-2 focus-within:ring-dark-blue/50 rounded-lg;
+    }
+
+    .button-primary {
+        @apply min-h-10 flex flex-row items-center p-2 outline-none rounded-lg bg-dark-blue cursor-pointer hover:bg-dark-blue/80 active:bg-dark-blue/60 text-white;
+    }
+
+    .button-outline {
+        @apply min-h-10 flex flex-row items-center p-2 outline-none rounded-lg border border-neutral-400 cursor-pointer hover:border-neutral-500 active:border-neutral-300;
+    }
+}

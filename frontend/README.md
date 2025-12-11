@@ -1,38 +1,43 @@
-# sv
+# DevBin Frontend - Bin for All Your Pasting Needs
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Simple straight forward UI for the DevBin pastes service programmed in Svelte
 
-## Creating a project
+## Prerequisites
 
-If you're seeing this, you've probably already done this step. Congrats!
+You may require the backend running before you can create and view pastes instructions for settings this up at [DevBinBackendSetup](https://github.com/TheDeveloperDen/DevBin/blob/master/README.md)
+
+> This may be simplified in the future to start off of a single command
+
+then install node modules via:
 
 ```sh
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
+pnpm i
 ```
 
 ## Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+```sh
+pnpm dev
+```
+
+or, to start the server and open a browser:
 
 ```sh
-npm run dev
+pnpm dev -- --open
+```
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+Always a good idea to setup make sure your api client is up to date:
+
+```sh
+pnpm update:api-client
 ```
 
 ## Building
 
-To create a production version of your app:
+To build the application just run:
 
 ```sh
 npm run build
 ```
 
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+> Depending on your environment, you may need an environment specific adapter [adapter](https://svelte.dev/docs/kit/adapters)
