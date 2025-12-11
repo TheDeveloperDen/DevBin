@@ -2,7 +2,7 @@
 
 Simple straight forward UI for the DevBin pastes service programmed in Svelte
 
-## 1 Prerequisites
+## Prerequisites
 
 You may require the backend running before you can create and view pastes instructions for settings this up at [DevBinBackendSetup](https://github.com/TheDeveloperDen/DevBin/blob/master/README.md)
 
@@ -14,7 +14,7 @@ then install node modules via:
 pnpm i
 ```
 
-## 2 Developing
+## Developing
 
 ```sh
 pnpm dev
@@ -32,7 +32,7 @@ Always a good idea to setup make sure your api client is up to date:
 pnpm update:api-client
 ```
 
-## 3 Building
+## Building
 
 To build the application just run:
 
