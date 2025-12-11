@@ -1,4 +1,3 @@
-from aiocache import Cache, SimpleMemoryCache, cached
 from aiocache.serializers import PickleSerializer
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
