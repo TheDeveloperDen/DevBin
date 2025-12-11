@@ -31,7 +31,7 @@ class CreatePaste(BaseModel):
                                         description="The datetime the Paste should expire (None = Never) Note: No guarantee given!")
 
     @field_validator('expires_at')
-    def validate_expires_in(cls, v):
+        def validate_expires_in(cls, v):
         if v is not None and v <= datetime.now():
             raise ValueError('expires_in must be in the future')
         return v
