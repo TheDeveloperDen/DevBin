@@ -18,8 +18,6 @@ pastes_route = APIRouter(
 cache = LRUMemoryCache(
     serializer=PickleSerializer(),
     max_size=1000,
-    # Note: aiocache doesn't directly support size limits
-    # You'd need to implement custom eviction logic
 )
 
 
