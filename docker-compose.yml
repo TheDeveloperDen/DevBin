@@ -7,10 +7,6 @@ services:
     build: backend/.
     ports:
       - "8000:8000"
-    environment:
-      - PORT=8000
-      - RELOAD=false
-      - APP_DATABASE_URL=postgresql+asyncpg://postgres:postgres@devbin_db:5432/postgres
     volumes:
       - ./files:/app/files
     depends_on:
@@ -20,10 +16,6 @@ services:
     env_file:
       - .env
     image: postgres:16
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
     ports:
       - "5432:5432"
     volumes:
