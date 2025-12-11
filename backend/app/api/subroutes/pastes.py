@@ -6,6 +6,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from app.api.dto.paste_dto import CreatePaste
+from app.config import Config
 from app.containers import Container
 from app.ratelimit import limiter
 from app.services.paste_service import PasteService
@@ -21,12 +22,19 @@ cache = LRUMemoryCache(
 )
 
 
+def is_exempt_from_limit(request: Request) -> bool:
+    """Check if request has valid bypass token."""
+    if Config.BYPASS_TOKEN is None or Config.BYPASS_TOKEN == "":
+        return False
+    bypass_token = request.headers.get("Authorization")
+    return bypass_token == Config.BYPASS_TOKEN  # Use env variable in production!
+
+
 @pastes_route.get("/{paste_id}")
-@limiter.limit("10/minute")
+@limiter.limit("10/minute", exempt_when=is_exempt_from_limit)
 @inject
 async def get_paste(request: Request, paste_id: UUID4,
                     paste_service: PasteService = Depends(Provide[Container.paste_service])):
-
     cached_result = await cache.get(paste_id)
     if cached_result:
         return Response(
@@ -36,7 +44,6 @@ async def get_paste(request: Request, paste_id: UUID4,
                 "Cache-Control": "public, max-age=3600",
             }
         )
-
 
     paste_result = await paste_service.get_paste_by_id(paste_id)
     if not paste_result:
@@ -57,7 +64,7 @@ async def get_paste(request: Request, paste_id: UUID4,
 
 
 @pastes_route.post("")
-@limiter.limit("4/minute")
+@limiter.limit("4/minute", exempt_when=is_exempt_from_limit)
 @inject
 async def create_paste(request: Request,
                        create_paste_body: CreatePaste,
