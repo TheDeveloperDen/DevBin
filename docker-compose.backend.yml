@@ -1,0 +1,13 @@
+name: devbin
+
+services:
+  app:
+    build: backend/.
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - RELOAD=false
+      - APP_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
+    volumes:
+      - ./files:/app/files

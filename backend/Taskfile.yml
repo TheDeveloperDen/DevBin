@@ -1,0 +1,11 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  startapi:
+    cmd: uv run main.py
+  migrate:
+    cmd: alembic upgrade head
+  downmigrate:
+    cmd: alembic downgrade -1
