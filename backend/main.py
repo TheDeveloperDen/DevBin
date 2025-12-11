@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import os
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
@@ -13,7 +12,7 @@ from slowapi.errors import RateLimitExceeded
 from uuid import UUID
 
 from app.api.middlewares import UserMetadataMiddleware
-from app.config import get_config, Config
+from app.config import config
 from app.containers import Container
 from app.ratelimit import limiter
 
@@ -75,8 +74,8 @@ def main():
 
     uvicorn.run("main:app", host=os.getenv("HOST", "0.0.0.0"), port=int(os.getenv("PORT", "8000")),
                 reload=os.getenv("RELOAD", "true").lower() == "true", server_header=False,
-                workers=os.cpu_count() or 1 if Config.WORKERS is True else Config.WORKERS,
-                log_level=None if Config.DEBUG else "info")
+                workers=os.cpu_count() or 1 if config.WORKERS is True else config.WORKERS,
+                log_level=None if config.DEBUG else "info")
 
 
 if __name__ == "__main__":
