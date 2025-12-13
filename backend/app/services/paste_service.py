@@ -4,15 +4,17 @@ import asyncio
 import logging
 import shutil
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from os import path
 from pathlib import Path
+from typing import Coroutine, final
 
 import aiofiles
 from aiofiles import os
 from fastapi import HTTPException
 from pydantic import UUID4
 from sqlalchemy import delete, or_, select
+from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from app.api.dto.paste_dto import CreatePaste, PasteContentLanguage, PasteResponse
@@ -22,28 +24,32 @@ from app.db.models import PasteEntity
 
 
 class PasteService:
-    def __init__(self, session: sessionmaker, paste_base_folder_path: str = ""):
-        self.session_maker = session
-        self.paste_base_folder_path = (
+    def __init__(
+        self,
+        session: sessionmaker[AsyncSession],  # pyright: ignore[reportInvalidTypeArguments]
+        paste_base_folder_path: str = "",
+    ):
+        self.session_maker: sessionmaker[AsyncSession] = session  # pyright: ignore[reportInvalidTypeArguments]
+        self.paste_base_folder_path: str = (
             paste_base_folder_path  # if it is in a subfolder of the project
         )
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self._cleanup_task: asyncio.Task | None = None
-        self._lock_file = Path(".cleanup.lock")
+        self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
+        self._cleanup_task: asyncio.Task[Coroutine[None, None, None]] | None = None
+        self._lock_file: Path = Path(".cleanup.lock")
 
     def start_cleanup_worker(self):
         """Start the background cleanup worker"""
         self.logger.info("Starting cleanup worker")
-        if self._cleanup_task is not None or self._lock_file.exists() is not None:
+        if self._cleanup_task is not None or self._lock_file.exists():
             return  # Already running
-        self._acquire_lock()
+        _ = self._acquire_lock()
         self._cleanup_task = asyncio.create_task(self._cleanup_loop())
         self.logger.info("Background cleanup worker started")
 
     async def stop_cleanup_worker(self):
         """Stop the background cleanup worker"""
         if self._cleanup_task is not None:
-            self._cleanup_task.cancel()
+            _ = self._cleanup_task.cancel()
             try:
                 await self._cleanup_task
             except asyncio.CancelledError:
@@ -205,7 +211,7 @@ class PasteService:
             if result is None:
                 return None
             content = await self._read_content(
-                path.join(self.paste_base_folder_path, result.content_path),
+                path.join(self.paste_base_folder_path, result.content_path),  # pyright: ignore[reportUnknownArgumentType]
             )
             return PasteResponse(
                 id=result.id,
@@ -262,7 +268,6 @@ class PasteService:
                 )
         except Exception as exc:
             self.logger.error("Failed to create paste: %s", exc)
-            await session.rollback()
             await self._remove_file(paste_path)
             raise HTTPException(
                 status_code=500,

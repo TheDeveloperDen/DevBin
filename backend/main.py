@@ -28,20 +28,20 @@ def _build_container() -> Container:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     container = _build_container()
-    app.container = container  # type: ignore[attr-defined]
+    app.container = container  # type: ignore[attr-defined]  # pyright: ignore[reportAttributeAccessIssue]
 
     # Initialize resources (e.g., DB engine) and wire dependencies
-    await container.init_resources()
+    await container.init_resources()  # pyright: ignore[reportGeneralTypeIssues]
     container.wire()
     paste_service: PasteService = (
-        await container.paste_service()
+        await container.paste_service()  # pyright: ignore[reportGeneralTypeIssues]
     )  # or however you resolve it
     paste_service.start_cleanup_worker()
     try:
         yield
     finally:
         await paste_service.stop_cleanup_worker()
-        await container.shutdown_resources()
+        await container.shutdown_resources()  # pyright: ignore[reportGeneralTypeIssues]
 
 
 def apply_rate_limiter(app: FastAPI):
