@@ -3,9 +3,9 @@
 version: '3'
 
 tasks:
-  startapi:
+  api:start:
     cmd: uv run main.py
-  migrate:
+  api:migrate:
     cmd: alembic upgrade head
-  downmigrate:
+  api:downmigrate:
     cmd: alembic downgrade -1

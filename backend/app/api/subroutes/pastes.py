@@ -6,7 +6,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from app.api.dto.paste_dto import CreatePaste
-from app.config import Config
+from app.config import Config, config
 from app.containers import Container
 from app.ratelimit import limiter
 from app.services.paste_service import PasteService
@@ -18,7 +18,7 @@ pastes_route = APIRouter(
 )
 cache = LRUMemoryCache(
     serializer=PickleSerializer(),
-    max_size=1000,
+    max_size=config.CACHE_SIZE_LIMIT,
 )
 
 
@@ -41,7 +41,7 @@ async def get_paste(request: Request, paste_id: UUID4,
             cached_result,
             headers={
                 "Content-Type": "application/json",
-                "Cache-Control": "public, max-age=3600",
+                "Cache-Control": f"public, max-age={config.CACHE_TTL}",
             }
         )
 
@@ -52,13 +52,13 @@ async def get_paste(request: Request, paste_id: UUID4,
                         )
     paste_result = paste_result.model_dump_json()
 
-    await cache.set(paste_id, paste_result)
+    await cache.set(paste_id, paste_result, ttl=config.CACHE_TTL)
 
     return Response(
         paste_result,
         headers={
             "Content-Type": "application/json",
-            "Cache-Control": "public, max-age=3600",
+            "Cache-Control": f"public, max-age={config.CACHE_TTL}",
         }
     )
 

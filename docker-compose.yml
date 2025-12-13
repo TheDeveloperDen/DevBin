@@ -1,7 +1,7 @@
 name: devbin
 
 services:
-  app:
+  devbin:
     env_file:
       - .env
     build: backend/.

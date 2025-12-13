@@ -107,6 +107,7 @@ dependencies = [
     { name = "asyncpg" },
     { name = "dependency-injector" },
     { name = "fastapi" },
+    { name = "fastapi-cors" },
     { name = "orjson" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -131,6 +132,7 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.29" },
     { name = "dependency-injector", specifier = ">=4.41" },
     { name = "fastapi", specifier = ">=0.124" },
+    { name = "fastapi-cors", specifier = ">=0.0.6" },
     { name = "orjson", specifier = ">=3.11.5" },
     { name = "psycopg2-binary", marker = "extra == 'migrations'" },
     { name = "pydantic", specifier = ">=2.7" },
@@ -193,6 +195,19 @@ wheels = [
 ]
 
 [[package]]
+name = "environs"
+version = "14.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "marshmallow" },
+    { name = "python-dotenv" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/aa/75/06801d5beeb398ed3903167af9376bb81c4ac41c44a53d45193065ebb1a8/environs-14.5.0.tar.gz", hash = "sha256:f7b8f6fcf3301bc674bc9c03e39b5986d116126ffb96764efd34c339ed9464ee", size = 35426, upload-time = "2025-11-02T21:30:36.78Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d3/f3/6961beb9a1e77d01dee1dd48f00fb3064429c8abcfa26aa863eb7cb2b6dd/environs-14.5.0-py3-none-any.whl", hash = "sha256:1abd3e3a5721fb09797438d6c902bc2f35d4580dfaffe68b8ee588b67b504e13", size = 17202, upload-time = "2025-11-02T21:30:35.186Z" },
+]
+
+[[package]]
 name = "fastapi"
 version = "0.124.0"
 source = { registry = "https://pypi.org/simple" }
@@ -205,6 +220,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/48/9c/11969bd3e3bc4aa3a711f83dd3720239d3565a934929c74fc32f6c9f3638/fastapi-0.124.0.tar.gz", hash = "sha256:260cd178ad75e6d259991f2fd9b0fee924b224850079df576a3ba604ce58f4e6", size = 357623, upload-time = "2025-12-06T13:11:35.692Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4d/29/9e1e82e16e9a1763d3b55bfbe9b2fa39d7175a1fd97685c482fa402e111d/fastapi-0.124.0-py3-none-any.whl", hash = "sha256:91596bdc6dde303c318f06e8d2bc75eafb341fc793a0c9c92c0bc1db1ac52480", size = 112505, upload-time = "2025-12-06T13:11:34.392Z" },
+]
+
+[[package]]
+name = "fastapi-cors"
+version = "0.0.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "environs" },
+    { name = "fastapi" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/22/4b/33e263c78cc50b6477319b1403a3ae8f9139b4272411a415267104e145a3/fastapi-cors-0.0.6.tar.gz", hash = "sha256:17eeb92f2b3dd8f0deb8ca69f031760e35edd5a0c811aaf80f9743e5e6ae50a1", size = 4440, upload-time = "2023-07-12T17:17:03.083Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/54/ad/016bdc85603cca123527167cb3e3ca408f639f3ad71b8d51fd50b116b85e/fastapi_cors-0.0.6-py3-none-any.whl", hash = "sha256:d116b482c682f9c5330f04b1c49a9d504f3a9df6373bc43dd6c31f3b9d0b8b15", size = 4990, upload-time = "2023-07-12T17:17:01.679Z" },
 ]
 
 [[package]]
@@ -354,6 +382,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fb/df/5bd7a48c256faecd1d36edc13133e51397e41b73bb77e1a69deab746ebac/markupsafe-3.0.3-cp314-cp314t-win32.whl", hash = "sha256:915c04ba3851909ce68ccc2b8e2cd691618c4dc4c4232fb7982bca3f41fd8c3d", size = 14819, upload-time = "2025-09-27T18:37:26.285Z" },
     { url = "https://files.pythonhosted.org/packages/1a/8a/0402ba61a2f16038b48b39bccca271134be00c5c9f0f623208399333c448/markupsafe-3.0.3-cp314-cp314t-win_amd64.whl", hash = "sha256:4faffd047e07c38848ce017e8725090413cd80cbc23d86e55c587bf979e579c9", size = 15426, upload-time = "2025-09-27T18:37:27.316Z" },
     { url = "https://files.pythonhosted.org/packages/70/bc/6f1c2f612465f5fa89b95bead1f44dcb607670fd42891d8fdcd5d039f4f4/markupsafe-3.0.3-cp314-cp314t-win_arm64.whl", hash = "sha256:32001d6a8fc98c8cb5c947787c5d08b0a50663d139f1305bac5885d98d9b40fa", size = 14146, upload-time = "2025-09-27T18:37:28.327Z" },
+]
+
+[[package]]
+name = "marshmallow"
+version = "4.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/4f/81/edb105b3296712a282680bc1ae02b8c1bb45d8f1edad3ff9fab1d41e9507/marshmallow-4.1.1.tar.gz", hash = "sha256:550aa14b619072f0a8d8184911b3f1021c5c32587fb27318ddf81ce0d0029c9d", size = 220720, upload-time = "2025-12-05T22:56:09.282Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/36/c9/4364652639e3aa952f9e941c38a4f88a0eb29fcbb7bd642fe2de4322c834/marshmallow-4.1.1-py3-none-any.whl", hash = "sha256:9038db4cceb849ce2b8676ccf3d8e5b5e634ac499e291397efa260aa796c385a", size = 48295, upload-time = "2025-12-05T22:56:07.415Z" },
 ]
 
 [[package]]

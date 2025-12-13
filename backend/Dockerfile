@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y \
 # Expose the port the app runs on
 EXPOSE $PORT
 
-HEALTHCHECK --interval=5s --timeout=5s --start-period=3s --retries=3 CMD curl -f http://localhost:"$PORT"/health || exit 1
+HEALTHCHECK --interval=15s --timeout=5s --start-period=3s CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
 # Command to run the application
 CMD ["uv", "run", "main.py"]

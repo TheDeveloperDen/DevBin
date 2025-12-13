@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
@@ -9,20 +8,13 @@ from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from uuid import UUID
+
+from starlette.middleware.cors import CORSMiddleware
 
 from app.api.middlewares import UserMetadataMiddleware
 from app.config import config
 from app.containers import Container
 from app.ratelimit import limiter
-
-
-# Custom JSON encoder for UUID
-class UUIDEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, UUID):
-            return str(obj)
-        return super().default(obj)
 
 
 # Set the custom encoder
@@ -60,6 +52,15 @@ def create_app() -> FastAPI:
         default_response_class=ORJSONResponse
     )
     apply_rate_limiter(app)
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=config.CORS_DOMAINS,  # Adjust this to your needs
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     app.add_middleware(UserMetadataMiddleware)
     app.include_router(router)
     return app

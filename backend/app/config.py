@@ -16,6 +16,14 @@ class Config(BaseSettings):
     WORKERS: int | Literal[True] = Field(default=1, validation_alias="APP_WORKERS")
     BYPASS_TOKEN: str | None = Field(default=None, validation_alias="APP_BYPASS_TOKEN")
 
+    CORS_DOMAINS: list[str] = Field(default=["*"], validation_alias="APP_CORS_DOMAINS")
+
+    SAVE_USER_AGENT: bool = Field(default=False, validation_alias="APP_SAVE_USER_AGENT")
+    SAVE_IP_ADDRESS: bool = Field(default=False, validation_alias="APP_SAVE_IP_ADDRESS")
+
+    CACHE_SIZE_LIMIT: int = Field(default=1000, validation_alias="APP_CACHE_SIZE_LIMIT")
+    CACHE_TTL: int = Field(default=300, validation_alias="APP_CACHE_TTL")
+
     DEBUG: bool = Field(default=False, validation_alias="APP_DEBUG")
 
     model_config = {

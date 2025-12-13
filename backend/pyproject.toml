@@ -19,6 +19,7 @@ dependencies = [
     "slowapi>=0.1.9",
     "orjson>=3.11.5",
     "aiocache>=0.12.3",
+    "fastapi-cors>=0.0.6",
 ]
 [project.optional-dependencies]
 migrations = [
