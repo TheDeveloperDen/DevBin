@@ -1,6 +1,8 @@
 [project]
 name = "backend"
-version = "0.1.0"
+version = "0.0.1"
+keywords = ["Pastebin", "Simplistic"]
+urls = { github = "https://github.com/TheDeveloperDen/DevBin" }
 description = "DevBins backend"
 requires-python = ">=3.13"
 dependencies = [
@@ -21,7 +23,6 @@ dependencies = [
     "aiocache>=0.12.3",
     "fastapi-cors>=0.0.6",
     "ruff>=0.14.9",
-    "basedpyright>=1.36.1",
 ]
 [project.optional-dependencies]
 migrations = [
@@ -37,20 +38,3 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages]
 find = { where = ["."], include = ["app*", "files*", "alembic*"] }
-
-[tool.pyright]
-include = ["app", "main.py"]
-exclude = ["tests", "venv", ".venv"]
-reportMissingImports = true
-reportMissingTypeStubs = false
-reportAny = false
-reportUnknownMember = false
-reportUnknownVariableType = false
-reportUnknownMemberType = false
-reportArgumentType = false
-reportCallIssue = false
-reportUnusedCallResult = false
-pythonVersion = "3.13"
-executionEnvironments = [
-    { root = ".", pythonVersion = "3.13" }
-]
