@@ -33,9 +33,9 @@ class PasteService:
     def start_cleanup_worker(self):
         """Start the background cleanup worker"""
         self.logger.info("Starting cleanup worker")
-        if self._cleanup_task is not None:
+        if self._cleanup_task is not None or self._lock_file.exists() is not None:
             return  # Already running
-
+        self._acquire_lock()
         self._cleanup_task = asyncio.create_task(self._cleanup_loop())
         self.logger.info("Background cleanup worker started")
 
@@ -48,29 +48,26 @@ class PasteService:
             except asyncio.CancelledError:
                 pass
             self._cleanup_task = None
+            self._release_lock()
             self.logger.info("Background cleanup worker stopped")
 
     async def _cleanup_loop(self):
         """Main cleanup loop that runs every 10 minutes"""
         while True:
+            self._touch_lock()
             try:
                 logging.info("Cleaning up expired pastes")
                 # Try to acquire lock (only one worker can run cleanup)
-                if not self._acquire_lock():
-                    # Another worker is already running cleanup
-                    await asyncio.sleep(600)  # Wait 10 minutes before retry
-                    continue
-
                 await self._cleanup_expired_pastes()
-
-                # Release lock
-                self._release_lock()
 
                 # Wait 5 minutes before next run
                 await asyncio.sleep(300)
             except Exception as exc:
                 self.logger.error("Error in cleanup loop: %s", exc)
                 await asyncio.sleep(60)  # Retry after 1 minute on error
+
+    def _touch_lock(self):
+        self._lock_file.touch()
 
     def _acquire_lock(self) -> bool:
         """Try to acquire cleanup lock"""
@@ -82,7 +79,7 @@ class PasteService:
                     return False  # Lock still valid
 
             # Create or update lock file
-            self._lock_file.touch()
+            self._touch_lock()
             logging.info("Cleanup lock acquired")
             return True
         except Exception as exc:
