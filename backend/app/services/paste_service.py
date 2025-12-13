@@ -12,20 +12,21 @@ import aiofiles
 from aiofiles import os
 from fastapi import HTTPException
 from pydantic import UUID4
-from sqlalchemy import select, delete, or_
+from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import sessionmaker
 
-from app.api.dto.paste_dto import CreatePaste, PasteResponse, PasteContentLanguage
+from app.api.dto.paste_dto import CreatePaste, PasteContentLanguage, PasteResponse
 from app.api.dto.user_meta_data import UserMetaData
 from app.config import config
 from app.db.models import PasteEntity
 
 
 class PasteService:
-    def __init__(self, session: sessionmaker,
-                 paste_base_folder_path: str = ""):
+    def __init__(self, session: sessionmaker, paste_base_folder_path: str = ""):
         self.session_maker = session
-        self.paste_base_folder_path = paste_base_folder_path  # if it is in a subfolder of the project
+        self.paste_base_folder_path = (
+            paste_base_folder_path  # if it is in a subfolder of the project
+        )
         self.logger = logging.getLogger(self.__class__.__name__)
         self._cleanup_task: asyncio.Task | None = None
         self._lock_file = Path(".cleanup.lock")
@@ -97,6 +98,7 @@ class PasteService:
     async def _cleanup_expired_pastes(self):
         """Remove expired pastes and their files"""
         from app.api.subroutes.pastes import cache
+
         try:
             async with self.session_maker() as session:
                 current_time = datetime.now()
@@ -113,12 +115,9 @@ class PasteService:
                 error: bool = False
                 # Delete from database and Files
                 for paste_id, content_path in expired_pastes:
-
                     await cache.delete(paste_id)
 
-                    delete_stmt = delete(PasteEntity).where(
-                        PasteEntity.id == paste_id
-                    )
+                    delete_stmt = delete(PasteEntity).where(PasteEntity.id == paste_id)
                     file_path = Path(self.paste_base_folder_path) / content_path
                     try:
                         if file_path.exists():
@@ -127,7 +126,9 @@ class PasteService:
                         await session.commit()
                     except Exception as exc:
                         error = True
-                        self.logger.error("Failed to remove file %s: %s", file_path, exc)
+                        self.logger.error(
+                            "Failed to remove file %s: %s", file_path, exc
+                        )
                 if not error:
                     delete_stmt = delete(PasteEntity).where(
                         PasteEntity.expires_at < current_time
@@ -173,7 +174,9 @@ class PasteService:
             if free < min_free_space:
                 self.logger.warning(
                     "Not enough disk space available. Total: %d, Used: %d, Free: %d",
-                    total, used, free
+                    total,
+                    used,
+                    free,
                 )
                 return False
 
@@ -185,9 +188,20 @@ class PasteService:
 
     async def get_paste_by_id(self, paste_id: UUID4) -> PasteResponse | None:
         async with self.session_maker() as session:
-            stmt = select(PasteEntity).where(PasteEntity.id == paste_id, or_(PasteEntity.expires_at > datetime.now(),
-                                                                             PasteEntity.expires_at.is_(None))).limit(1)
-            result: PasteEntity | None = (await session.execute(stmt)).scalar_one_or_none()
+            stmt = (
+                select(PasteEntity)
+                .where(
+                    PasteEntity.id == paste_id,
+                    or_(
+                        PasteEntity.expires_at > datetime.now(),
+                        PasteEntity.expires_at.is_(None),
+                    ),
+                )
+                .limit(1)
+            )
+            result: PasteEntity | None = (
+                await session.execute(stmt)
+            ).scalar_one_or_none()
             if result is None:
                 return None
             content = await self._read_content(
@@ -202,18 +216,19 @@ class PasteService:
                 expires_at=result.expires_at,
             )
 
-    async def create_paste(self, paste: CreatePaste, user_data: UserMetaData) -> PasteResponse:
-
+    async def create_paste(
+        self, paste: CreatePaste, user_data: UserMetaData
+    ) -> PasteResponse:
         if not self.verify_storage_limit():
             raise HTTPException(
                 status_code=500,
                 detail="Storage limit reached, contact administration",
-
             )
 
         paste_id = uuid.uuid4()
         paste_path = await self._save_content(
-            str(paste_id), paste.content,
+            str(paste_id),
+            paste.content,
         )
         if not paste_path:
             raise HTTPException(

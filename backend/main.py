@@ -10,7 +10,6 @@ from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.middlewares import UserMetadataMiddleware
@@ -34,7 +33,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Initialize resources (e.g., DB engine) and wire dependencies
     await container.init_resources()
     container.wire()
-    paste_service: PasteService = await container.paste_service()  # or however you resolve it
+    paste_service: PasteService = (
+        await container.paste_service()
+    )  # or however you resolve it
     paste_service.start_cleanup_worker()
     try:
         yield
@@ -50,13 +51,14 @@ def apply_rate_limiter(app: FastAPI):
 
 def create_app() -> FastAPI:
     from app.api.routes import router
+
     if config.DEBUG:
         logging.basicConfig(level=logging.DEBUG)
     app = FastAPI(
         title="DevBins API",
         version="0.1.0-alpha",
         lifespan=lifespan,
-        default_response_class=ORJSONResponse
+        default_response_class=ORJSONResponse,
     )
     apply_rate_limiter(app)
     # Add CORS middleware
@@ -80,11 +82,15 @@ app = create_app()
 def main():
     import uvicorn
 
-    uvicorn.run("main:app", host=os.getenv("HOST", "0.0.0.0"), port=int(os.getenv("PORT", "8000")),
-                reload=os.getenv("RELOAD", "true").lower() == "true", server_header=False,
-                workers=os.cpu_count() or 1 if config.WORKERS is True else config.WORKERS,
-                log_level=None if config.DEBUG else "info")
-
+    uvicorn.run(
+        "main:app",
+        host=os.getenv("HOST", "0.0.0.0"),
+        port=int(os.getenv("PORT", "8000")),
+        reload=os.getenv("RELOAD", "true").lower() == "true",
+        server_header=False,
+        workers=os.cpu_count() or 1 if config.WORKERS is True else config.WORKERS,
+        log_level=None if config.DEBUG else "info",
+    )
 
 
 if __name__ == "__main__":

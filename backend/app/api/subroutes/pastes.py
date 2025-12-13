@@ -1,4 +1,5 @@
-from typing import Optional, Any
+from typing import Any, Optional
+from uuid import uuid4
 
 import slowapi
 from aiocache.serializers import PickleSerializer
@@ -9,7 +10,6 @@ from pydantic import UUID4
 from slowapi.util import get_ipaddr
 from starlette.requests import Request
 from starlette.responses import Response
-from uuid import uuid4
 
 from app.api.dto.Error import ErrorResponse
 from app.api.dto.paste_dto import CreatePaste, PasteResponse

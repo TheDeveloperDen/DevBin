@@ -54,8 +54,10 @@ class Container(containers.DeclarativeContainer):
     )
 
     # Services
+    from app.services.health_service import (
+        HealthService,  # local import to avoid cycles during tooling
+    )
     from app.services.paste_service import PasteService
-    from app.services.health_service import HealthService  # local import to avoid cycles during tooling
     health_service = providers.Factory(HealthService, session_factory)
 
     paste_service = providers.Factory(
