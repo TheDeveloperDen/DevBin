@@ -1,12 +1,20 @@
+import { API_BASE_URL } from "$env/static/private";
 import { ApiService } from "$lib/api";
-import type { Paste } from "$lib/types.js";
+import type { Paste } from "$lib/types";
+import { env } from "$env/dynamic/private";
 
-export async function load({ params }) {
+export async function load({ params, getClientAddress }) {
+  const client_ip = getClientAddress();
   const { id: paste_id } = params;
+
   try {
     const response = await ApiService.getPastePastesPasteIdGet({
+      baseUrl: env.API_BASE_URL,
       path: {
         paste_id: paste_id,
+      },
+      headers: {
+        "X-Forwarded-For": client_ip,
       },
     });
 

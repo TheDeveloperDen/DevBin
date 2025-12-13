@@ -1,18 +1,9 @@
 <script lang="ts">
     import { page } from "$app/state";
-    import moment from "moment";
-    import { formatDistance } from "date-fns";
-    import { relativeDate } from "$lib/utils/date.js";
+    import { relativeDate } from "$lib/utils/date";
 
     let { data } = $props();
     const MESSAGE_CLEAR_TIMEOUT = 1500;
-
-    function formatDate(date: Date | string) {
-        return new Date(date).toLocaleString("en-US", {
-            dateStyle: "long",
-            timeStyle: "medium",
-        });
-    }
 
     let copySuccess = $state(false);
 

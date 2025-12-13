@@ -3,8 +3,10 @@ import SimpleCard from "$lib/components/og/paste-preview.svelte";
 import type { RequestHandler } from "@sveltejs/kit";
 import { ApiService } from "$lib/api";
 import type { Paste } from "$lib/types";
+import { env } from "$env/dynamic/private";
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, getClientAddress }) => {
+  const client_ip = getClientAddress();
   const { id } = params;
 
   let title = "";
@@ -15,8 +17,12 @@ export const GET: RequestHandler = async ({ params }) => {
     content = "No such paste";
   } else {
     const response = await ApiService.getPastePastesPasteIdGet({
+      baseUrl: env.API_BASE_URL,
       path: {
         paste_id: id,
+      },
+      headers: {
+        "X-Forwarded-For": client_ip,
       },
     });
 
