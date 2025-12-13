@@ -4,6 +4,8 @@ version: '3'
 
 tasks:
   api:start:
+    env:
+      APP_DEBUG: true
     cmd: uv run main.py
   api:migrate:
     cmd: alembic upgrade head

@@ -4,13 +4,15 @@ import slowapi
 from aiocache.serializers import PickleSerializer
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
+from orjson import orjson
 from pydantic import UUID4
 from slowapi.util import get_ipaddr
 from starlette.requests import Request
 from starlette.responses import Response
 from uuid import uuid4
 
-from app.api.dto.paste_dto import CreatePaste
+from app.api.dto.Error import ErrorResponse
+from app.api.dto.paste_dto import CreatePaste, PasteResponse
 from app.config import Config, config
 from app.containers import Container
 from app.ratelimit import limiter
@@ -35,7 +37,7 @@ def get_exempt_key(request: Request) -> str:
     return str(uuid4())  # To simulate a new request if it is the BYPASS_TOKEN
 
 
-@pastes_route.get("/{paste_id}")
+@pastes_route.get("/{paste_id}", responses={404: {"model": ErrorResponse}, 200: {"model": PasteResponse}})
 @limiter.limit("10/minute", key_func=get_exempt_key)
 @inject
 async def get_paste(request: Request, paste_id: UUID4,
@@ -52,9 +54,13 @@ async def get_paste(request: Request, paste_id: UUID4,
 
     paste_result = await paste_service.get_paste_by_id(paste_id)
     if not paste_result:
-        return Response({"error": "Paste not found"},
-                        status_code=404,
-                        )
+        return Response(
+            ErrorResponse(
+                error="paste_not_found",
+                message=f"Paste {paste_id} not found",
+            ).model_dump_json(), status_code=404, headers={
+                "Content-Type": "application/json",
+            })
     paste_result = paste_result.model_dump_json()
 
     await cache.set(paste_id, paste_result, ttl=config.CACHE_TTL)

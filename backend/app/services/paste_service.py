@@ -1,18 +1,23 @@
 from __future__ import annotations
 
+import asyncio
 import logging
+import shutil
 import uuid
+from datetime import datetime, timezone
 from os import path
+from pathlib import Path
 
 import aiofiles
 from aiofiles import os
 from fastapi import HTTPException
 from pydantic import UUID4
-from sqlalchemy import select
+from sqlalchemy import select, delete, or_
 from sqlalchemy.orm import sessionmaker
 
 from app.api.dto.paste_dto import CreatePaste, PasteResponse, PasteContentLanguage
 from app.api.dto.user_meta_data import UserMetaData
+from app.config import config
 from app.db.models import PasteEntity
 
 
@@ -22,8 +27,120 @@ class PasteService:
         self.session_maker = session
         self.paste_base_folder_path = paste_base_folder_path  # if it is in a subfolder of the project
         self.logger = logging.getLogger(self.__class__.__name__)
+        self._cleanup_task: asyncio.Task | None = None
+        self._lock_file = Path(".cleanup.lock")
 
-    async def _read_content(self, paste_path: str) -> str:
+    def start_cleanup_worker(self):
+        """Start the background cleanup worker"""
+        self.logger.info("Starting cleanup worker")
+        if self._cleanup_task is not None:
+            return  # Already running
+
+        self._cleanup_task = asyncio.create_task(self._cleanup_loop())
+        self.logger.info("Background cleanup worker started")
+
+    async def stop_cleanup_worker(self):
+        """Stop the background cleanup worker"""
+        if self._cleanup_task is not None:
+            self._cleanup_task.cancel()
+            try:
+                await self._cleanup_task
+            except asyncio.CancelledError:
+                pass
+            self._cleanup_task = None
+            self.logger.info("Background cleanup worker stopped")
+
+    async def _cleanup_loop(self):
+        """Main cleanup loop that runs every 10 minutes"""
+        while True:
+            try:
+                logging.info("Cleaning up expired pastes")
+                # Try to acquire lock (only one worker can run cleanup)
+                if not self._acquire_lock():
+                    # Another worker is already running cleanup
+                    await asyncio.sleep(600)  # Wait 10 minutes before retry
+                    continue
+
+                await self._cleanup_expired_pastes()
+
+                # Release lock
+                self._release_lock()
+
+                # Wait 1 minutes before next run
+                await asyncio.sleep(60)
+            except Exception as exc:
+                self.logger.error("Error in cleanup loop: %s", exc)
+                await asyncio.sleep(60)  # Retry after 1 minute on error
+
+    def _acquire_lock(self) -> bool:
+        """Try to acquire cleanup lock"""
+        try:
+            if self._lock_file.exists():
+                # Check if lock is stale (older than 15 minutes)
+                lock_time = self._lock_file.stat().st_mtime
+                if datetime.now().timestamp() - lock_time < 900:  # 15 minutes
+                    return False  # Lock still valid
+
+            # Create or update lock file
+            self._lock_file.touch()
+            logging.info("Cleanup lock acquired")
+            return True
+        except Exception as exc:
+            self.logger.error("Failed to acquire cleanup lock: %s", exc)
+            return False
+
+    def _release_lock(self):
+        """Release cleanup lock"""
+        try:
+            if self._lock_file.exists():
+                self._lock_file.unlink()
+        except Exception as exc:
+            self.logger.error("Failed to release cleanup lock: %s", exc)
+
+    async def _cleanup_expired_pastes(self):
+        """Remove expired pastes and their files"""
+        from app.api.subroutes.pastes import cache
+        try:
+            async with self.session_maker() as session:
+                current_time = datetime.now()
+                # Get expired paste IDs
+                stmt = select(PasteEntity.id, PasteEntity.content_path).where(
+                    PasteEntity.expires_at < current_time
+                )
+                result = await session.execute(stmt)
+                expired_pastes = result.fetchall()
+
+                if not expired_pastes:
+                    return
+
+                error: bool = False
+                # Delete from database and Files
+                for paste_id, content_path in expired_pastes:
+
+                    await cache.delete(paste_id)
+
+                    delete_stmt = delete(PasteEntity).where(
+                        PasteEntity.id == paste_id
+                    )
+                    file_path = Path(self.paste_base_folder_path) / content_path
+                    try:
+                        if file_path.exists():
+                            file_path.unlink()
+                        await session.execute(delete_stmt)
+                        await session.commit()
+                    except Exception as exc:
+                        error = True
+                        self.logger.error("Failed to remove file %s: %s", file_path, exc)
+                if not error:
+                    delete_stmt = delete(PasteEntity).where(
+                        PasteEntity.expires_at < current_time
+                    )
+                    await session.execute(delete_stmt)
+                    await session.commit()
+        except Exception as exc:
+            self.logger.error("Failed to cleanup expired pastes: %s", exc)
+
+    async def _read_content(self, paste_path: str) -> str | None:
         try:
             async with aiofiles.open(paste_path) as f:
                 return await f.read()
@@ -50,9 +167,29 @@ class PasteService:
         except Exception as exc:
             self.logger.error("Failed to remove file %s: %s", paste_path, exc)
 
+    def verify_storage_limit(self):
+        try:
+            # Get the total, used, and free disk space for the base folder path
+            total, used, free = shutil.disk_usage(self.paste_base_folder_path)
+            # Check if we have enough free space (let's say 100MB minimum)
+            min_free_space = config.MIN_STORAGE_MB * 1024 * 1024  # 100 MB in bytes
+            if free < min_free_space:
+                self.logger.warning(
+                    "Not enough disk space available. Total: %d, Used: %d, Free: %d",
+                    total, used, free
+                )
+                return False
+
+            return True
+        except Exception as exc:
+            self.logger.error("Failed to verify storage limit: %s", exc)
+            # If we can't check, better to allow the operation to proceed
+            return True
+
     async def get_paste_by_id(self, paste_id: UUID4) -> PasteResponse | None:
         async with self.session_maker() as session:
-            stmt = select(PasteEntity).where(PasteEntity.id == paste_id).limit(1)
+            stmt = select(PasteEntity).where(PasteEntity.id == paste_id, or_(PasteEntity.expires_at > datetime.now(),
+                                                                             PasteEntity.expires_at.is_(None))).limit(1)
             result: PasteEntity | None = (await session.execute(stmt)).scalar_one_or_none()
             if result is None:
                 return None
@@ -69,6 +206,14 @@ class PasteService:
             )
 
     async def create_paste(self, paste: CreatePaste, user_data: UserMetaData) -> PasteResponse:
+
+        if not self.verify_storage_limit():
+            raise HTTPException(
+                status_code=500,
+                detail="Storage limit reached, contact administration",
+
+            )
+
         paste_id = uuid.uuid4()
         paste_path = await self._save_content(
             str(paste_id), paste.content,

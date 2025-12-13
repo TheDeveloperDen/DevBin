@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
@@ -15,6 +17,7 @@ from app.api.middlewares import UserMetadataMiddleware
 from app.config import config
 from app.containers import Container
 from app.ratelimit import limiter
+from app.services.paste_service import PasteService
 
 
 # Set the custom encoder
@@ -31,10 +34,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Initialize resources (e.g., DB engine) and wire dependencies
     await container.init_resources()
     container.wire()
-
+    paste_service: PasteService = await container.paste_service()  # or however you resolve it
+    paste_service.start_cleanup_worker()
     try:
         yield
     finally:
+        await paste_service.stop_cleanup_worker()
         await container.shutdown_resources()
 
 
@@ -45,6 +50,8 @@ def apply_rate_limiter(app: FastAPI):
 
 def create_app() -> FastAPI:
     from app.api.routes import router
+    if config.DEBUG:
+        logging.basicConfig(level=logging.DEBUG)
     app = FastAPI(
         title="DevBins API",
         version="0.1.0-alpha",
@@ -77,6 +84,7 @@ def main():
                 reload=os.getenv("RELOAD", "true").lower() == "true", server_header=False,
                 workers=os.cpu_count() or 1 if config.WORKERS is True else config.WORKERS,
                 log_level=None if config.DEBUG else "info")
+
 
 
 if __name__ == "__main__":

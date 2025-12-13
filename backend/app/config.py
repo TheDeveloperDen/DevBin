@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator, ValidationError
 from pydantic_settings import BaseSettings
 
 
@@ -24,6 +24,9 @@ class Config(BaseSettings):
     CACHE_SIZE_LIMIT: int = Field(default=1000, validation_alias="APP_CACHE_SIZE_LIMIT")
     CACHE_TTL: int = Field(default=300, validation_alias="APP_CACHE_TTL")
 
+    MIN_STORAGE_MB: int = Field(default=1024, validation_alias="APP_MIN_STORAGE_MB",
+                                description="Minimum storage size in MB free")
+
     DEBUG: bool = Field(default=False, validation_alias="APP_DEBUG")
 
     model_config = {
@@ -31,6 +34,20 @@ class Config(BaseSettings):
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
     }
+
+    @field_validator("DATABASE_URL", mode="after")
+    def verify_db_url(cls, db_url: str) -> str:
+        split_url = db_url.split(":")
+        if len(split_url) <= 2:
+            raise ValidationError("Invalid database URL")
+
+        library = split_url[0]
+        if library == "postgresql":
+            split_url[0] += "+asyncpg"
+
+            return ":".join(split_url)
+
+        return db_url
 
 
 config = Config()
