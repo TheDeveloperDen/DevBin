@@ -66,8 +66,8 @@ class PasteService:
                 # Release lock
                 self._release_lock()
 
-                # Wait 1 minutes before next run
-                await asyncio.sleep(60)
+                # Wait 5 minutes before next run
+                await asyncio.sleep(300)
             except Exception as exc:
                 self.logger.error("Error in cleanup loop: %s", exc)
                 await asyncio.sleep(60)  # Retry after 1 minute on error
