@@ -1,9 +1,14 @@
+from typing import Optional, Any
+
+import slowapi
 from aiocache.serializers import PickleSerializer
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
 from pydantic import UUID4
+from slowapi.util import get_ipaddr
 from starlette.requests import Request
 from starlette.responses import Response
+from uuid import uuid4
 
 from app.api.dto.paste_dto import CreatePaste
 from app.config import Config, config
@@ -22,16 +27,16 @@ cache = LRUMemoryCache(
 )
 
 
-def is_exempt_from_limit(request: Request) -> bool:
-    """Check if request has valid bypass token."""
-    if Config.BYPASS_TOKEN is None or Config.BYPASS_TOKEN == "":
-        return False
-    bypass_token = request.headers.get("Authorization")
-    return bypass_token == Config.BYPASS_TOKEN  # Use env variable in production!
+def get_exempt_key(request: Request) -> str:
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or auth_header != config.BYPASS_TOKEN:
+        return get_ipaddr(request)
+
+    return str(uuid4())  # To simulate a new request if it is the BYPASS_TOKEN
 
 
 @pastes_route.get("/{paste_id}")
-@limiter.limit("10/minute", exempt_when=is_exempt_from_limit)
+@limiter.limit("10/minute", key_func=get_exempt_key)
 @inject
 async def get_paste(request: Request, paste_id: UUID4,
                     paste_service: PasteService = Depends(Provide[Container.paste_service])):
@@ -64,7 +69,7 @@ async def get_paste(request: Request, paste_id: UUID4,
 
 
 @pastes_route.post("")
-@limiter.limit("4/minute", exempt_when=is_exempt_from_limit)
+@limiter.limit("4/minute", key_func=get_exempt_key)
 @inject
 async def create_paste(request: Request,
                        create_paste_body: CreatePaste,
