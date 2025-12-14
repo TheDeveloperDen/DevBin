@@ -36,9 +36,6 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.17
         version: 4.1.17(vite@7.2.6(jiti@2.6.1)(lightningcss@1.30.2))
-      '@types/seedrandom':
-        specifier: ^3.0.8
-        version: 3.0.8
       svelte:
         specifier: ^5.43.8
         version: 5.45.6
@@ -636,9 +633,6 @@ packages:
 
   '@types/resolve@1.20.2':
     resolution: {integrity: sha512-60BCwRFOZCQhDncwQdxxeOEEkbc5dIMccYLwbxsS4TUNeVECQ/pBJ0j09mrHOl/JJvpRPGwO9SvE4nR2Nb/a4Q==}
-
-  '@types/seedrandom@3.0.8':
-    resolution: {integrity: sha512-TY1eezMU2zH2ozQoAFAQFOPpvP15g+ZgSfTZt31AUUH/Rxtnz3H+A/Sv1Snw2/amp//omibc+AEkTaA8KUeOLQ==}
 
   acorn@8.15.0:
     resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
@@ -1569,8 +1563,6 @@ snapshots:
   '@types/estree@1.0.8': {}
 
   '@types/resolve@1.20.2': {}
-
-  '@types/seedrandom@3.0.8': {}
 
   acorn@8.15.0: {}
 
