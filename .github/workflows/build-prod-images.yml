@@ -100,7 +100,7 @@ jobs:
         id: latest_tag
         run: |
           if [[ "${{ github.event.inputs.set_latest_tag }}" == true ]]; then
-            echo "latest_tag=ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-backend:latest" >> $GITHUB_OUTPUT
+            echo "latest_tag=ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-frontend:latest" >> $GITHUB_OUTPUT
           else
             echo "latest_tag=" >> $GITHUB_OUTPUT
           fi
