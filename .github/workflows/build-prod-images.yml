@@ -44,12 +44,12 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: |
-            ghcr.io/${{ needs.setup_build.outputs.repo_lc  }}-backend
+            ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-backend
       - name: Set latest tag
         id: latest_tag
         run: |
           if [[ "${{ github.event.inputs.set_latest_tag }}" == "true" ]]; then
-            echo "latest_tag=ghcr.io/${{ needs.setup_build.outputs.repo_lc  }}-backend:latest" >> $GITHUB_OUTPUT
+            echo "latest_tag=ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-backend:latest" >> $GITHUB_OUTPUT
           else
             echo "latest_tag=" >> $GITHUB_OUTPUT
           fi
@@ -60,7 +60,7 @@ jobs:
           push: true
           tags: |
             ${{ steps.meta_backend.outputs.tags }}
-            ghcr.io/${{ needs.setup_build.outputs.repo_lc  }}-backend:${{ steps.normalize_version.outputs.normalized_version }}
+            ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-backend:${{ steps.normalize_version.outputs.normalized_version }}
             ${{ steps.latest_tag.outputs.latest_tag }}
           labels: ${{ steps.meta_backend.outputs.labels }}
 
@@ -95,12 +95,12 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: |
-            ghcr.io/${{ needs.setup_build.outputs.repo_lc  }}-frontend
+            ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-frontend
       - name: Set latest tag
         id: latest_tag
         run: |
           if [[ "${{ github.event.inputs.set_latest_tag }}" == "true" ]]; then
-            echo "latest_tag=ghcr.io/${{ needs.setup_build.outputs.repo_lc  }}-backend:latest" >> $GITHUB_OUTPUT
+            echo "latest_tag=ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-backend:latest" >> $GITHUB_OUTPUT
           else
             echo "latest_tag=" >> $GITHUB_OUTPUT
           fi
@@ -111,6 +111,6 @@ jobs:
           push: true
           tags: |
             ${{ steps.meta_frontend.outputs.tags }}
-            ghcr.io/${{ needs.setup_build.outputs.repo_lc  }}-frontend:${{ steps.normalize_version.outputs.normalized_version }}
+            ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-frontend:${{ steps.normalize_version.outputs.normalized_version }}
             ${{ steps.latest_tag.outputs.latest_tag }}
           labels: ${{ steps.meta_frontend.outputs.labels }}
