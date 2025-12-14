@@ -1,14 +1,13 @@
 import { fail } from "@sveltejs/kit";
 import type { Actions } from "./$types";
-import { API_URL } from "$env/static/private";
 import type { ContentLanguage, ExpiryValues } from "$lib/types";
 import { convertExpiryValueToDate } from "$lib/utils/date";
 import { ApiService } from "$lib/api";
-import { format } from "date-fns";
+import { env } from "$env/dynamic/private";
 
 export const actions = {
   paste: async ({ request, getClientAddress }) => {
-    const user_ip = getClientAddress();
+    const client_ip = getClientAddress();
     const data = await request.formData();
     const title = data.get("title")?.toString() || "";
     const expires_at = data.get("expires_at")?.toString() as ExpiryValues;
@@ -48,17 +47,25 @@ export const actions = {
       }
 
       const response = await ApiService.createPastePastesPost({
+        baseUrl: env.API_BASE_URL,
         body: {
           title: cleanedformData.title,
           content: cleanedformData.content,
           content_language: cleanedformData.content_language as ContentLanguage,
           expires_at: cleanedformData.expires_at,
         },
+        headers: {
+          "X-Forwarded-For": client_ip,
+        },
       });
 
       if (response.error) {
         console.log(response.error);
         return fail(400, {
+          title,
+          expires_at,
+          content,
+          content_language,
           error: response.error.detail || "Something went wrong",
         });
       }
