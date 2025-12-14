@@ -11,8 +11,8 @@ jobs:
   setup_build:
     runs-on: ubuntu-latest
     outputs:
-      backend_changed: ${{ steps.changed_files.outputs.backend }} || ${{ github.event_name == 'workflow_dispatch' }}
-      frontend_changed: ${{ steps.changed_files.outputs.frontend }} || ${{ github.event_name == 'workflow_dispatch' }}
+      backend_changed: ${{ steps.changed_files.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' }}
+      frontend_changed: ${{ steps.changed_files.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' }}
       repo_lc: ${{ steps.lowercase_repo.outputs.REPO_LC }}
 
     steps:
