@@ -9,7 +9,7 @@ WORKDIR /app
 
 FROM base AS build
 # copy pnpm lock files and source
-COPY pnpm-*.yaml package.json  /app/
+COPY pnpm-lock.yaml /app
 WORKDIR /app
 RUN pnpm install --frozen-lockfile
 
