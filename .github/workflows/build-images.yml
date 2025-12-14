@@ -65,7 +65,7 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: |
-            ghcr.io/${{ github.repository }}/backend
+            ghcr.io/${{ github.repository }}-backend
 
       - name: Build and push Backend
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
@@ -104,7 +104,7 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: |
-            ghcr.io/${{ github.repository }}/frontend
+            ghcr.io/${{ github.repository }}-frontend
 
       - name: Build and push Frontend
         uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
