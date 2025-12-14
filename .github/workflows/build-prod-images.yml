@@ -30,6 +30,8 @@ jobs:
         id: normalize_version
         run: |
           echo "normalized_version=$(echo '${{ github.event.inputs.version }}' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9.]/-/g')" >> $GITHUB_OUTPUT
+          REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "REPO_LC=$REPO_LC" >> $GITHUB_OUTPUT
       - name: Login to Github Container Registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
@@ -79,7 +81,8 @@ jobs:
         id: normalize_version
         run: |
           echo "normalized_version=$(echo '${{ github.event.inputs.version }}' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9.]/-/g')" >> $GITHUB_OUTPUT
-
+          REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "REPO_LC=$REPO_LC" >> $GITHUB_OUTPUT
       - name: Login to Github Container Registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
