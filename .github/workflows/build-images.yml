@@ -3,7 +3,7 @@ name: Build Images
 on:
   pull_request:
     branches:
-      - main
+      - master
     types: [opened]
   workflow_dispatch:
 
@@ -19,7 +19,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v5
 
-      - name: Get changes 
+      - name: Get changes
         uses: tj-actions/changed-files@90a06d6ba9543371ab4df8eeca0be07ca6054959
         id: changed_files
         with:
