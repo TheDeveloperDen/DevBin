@@ -1,8 +1,8 @@
 from datetime import datetime
 from enum import Enum
-
-from pydantic import BaseModel, Field, field_validator, UUID4
 from uuid import UUID
+
+from pydantic import UUID4, BaseModel, Field, field_validator
 
 from app.config import config
 
@@ -25,15 +25,17 @@ class CreatePaste(BaseModel):
     content_language: PasteContentLanguage = Field(
         description="The language of the content",
         default=PasteContentLanguage.plain_text,
-        examples=[PasteContentLanguage.plain_text]
+        examples=[PasteContentLanguage.plain_text],
     )
-    expires_at: datetime | None = Field(None,
-                                        description="The datetime the Paste should expire (None = Never) Note: No guarantee given!")
+    expires_at: datetime | None = Field(
+        None,
+        description="The datetime the Paste should expire (None = Never) Note: No guarantee given!",
+    )
 
-    @field_validator('expires_at')
+    @field_validator("expires_at")
     def validate_expires_in(cls, v):
         if v is not None and v <= datetime.now():
-            raise ValueError('expires_in must be in the future')
+            raise ValueError("expires_in must be in the future")
         return v
 
 
@@ -50,8 +52,16 @@ class PasteResponse(BaseModel):
     content_language: PasteContentLanguage = Field(
         description="The language of the content",
     )
-    expires_at: datetime | None = Field(None,
-                                        description="The number of hours until the paste expires (0 = never) Note: No guarantee given!")
+    expires_at: datetime | None = Field(
+        None,
+        description="The number of hours until the paste expires (0 = never) Note: No guarantee given!",
+    )
     created_at: datetime = Field(
         description="The creation timestamp of the paste",
+    )
+
+
+class LegacyPasteResponse(BaseModel):
+    content: str | None = Field(
+        description="The content of the legacy paste, possible null if the content couldnt be read.",
     )

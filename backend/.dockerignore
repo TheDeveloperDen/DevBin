@@ -1,3 +1,4 @@
 files/
 .venv/
+.cleanup.lock
 alembic.ini

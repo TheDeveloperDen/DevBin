@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import shutil
 import uuid
@@ -16,8 +17,14 @@ from pydantic import UUID4
 from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.util import md5_hex
 
-from app.api.dto.paste_dto import CreatePaste, PasteContentLanguage, PasteResponse
+from app.api.dto.paste_dto import (
+    CreatePaste,
+    LegacyPasteResponse,
+    PasteContentLanguage,
+    PasteResponse,
+)
 from app.api.dto.user_meta_data import UserMetaData
 from app.config import config
 from app.db.models import PasteEntity
@@ -191,6 +198,25 @@ class PasteService:
             self.logger.error("Failed to verify storage limit: %s", exc)
             # If we can't check, better to allow the operation to proceed
             return True
+
+    async def get_legacy_paste_by_name(
+        self, paste_id: str
+    ) -> LegacyPasteResponse | None:
+        if not (await os.path.exists(self.paste_base_folder_path)) or not (
+            await os.path.isdir(path.join(self.paste_base_folder_path, "hastebin"))
+        ):
+            return None
+        paste_md5: str = hashlib.md5(paste_id.encode()).hexdigest()
+        file_path = path.join(self.paste_base_folder_path, "hastebin", paste_md5)
+
+        try:
+            if await os.path.exists(file_path):
+                async with aiofiles.open(file_path, "r") as f:
+                    content = await f.read()
+                return LegacyPasteResponse(content=content)
+        except (OSError, IOError):
+            pass
+        return None
 
     async def get_paste_by_id(self, paste_id: UUID4) -> PasteResponse | None:
         async with self.session_maker() as session:
