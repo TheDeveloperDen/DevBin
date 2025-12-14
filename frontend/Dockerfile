@@ -7,18 +7,22 @@ RUN corepack enable
 COPY . /app
 WORKDIR /app
 
-FROM base AS prod
+FROM base AS build
 # copy pnpm lock files and source
-COPY pnpm-lock.yaml /app
+COPY pnpm-*.yaml package.json  /app/
 WORKDIR /app
 RUN pnpm install --frozen-lockfile
 
 # build application
 COPY . /app
-RUN pnpm run build
+RUN pnpm build
+
+RUN pnpm prune --prod
 
 # We don't want to include artifacts etc. so include only build output
-FROM base
-COPY --from=prod /app/dist /app/dist
+FROM node:20-slim AS prod
+WORKDIR /app
+COPY --from=build /app/node_modules node_modules
+COPY --from=build /app/dist dist
 EXPOSE 3000
-CMD [ "pnpm", "start" ]
+CMD [ "node", "dist/index.js" ]
