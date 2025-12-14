@@ -1,45 +1,20 @@
 name: Build Images
 
 on:
-  pull_request:
-    branches:
-      - master
-    types: [opened]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., 0.0.1-alpha)'
+        required: true
+        type: string
+      set_latest_tag:
+        description: 'Set latest tag'
+        required: false
+        default: 'true'
+        type: boolean
 
 jobs:
-  setup_build:
-    runs-on: ubuntu-latest
-    outputs:
-      backend_changed: ${{ steps.changed_files.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' }}
-      frontend_changed: ${{ steps.changed_files.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' }}
-      repo_lc: ${{ steps.lowercase_repo.outputs.REPO_LC }}
-
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v5
-
-      - name: Get changes
-        uses: tj-actions/changed-files@90a06d6ba9543371ab4df8eeca0be07ca6054959
-        id: changed_files
-        with:
-          files_yaml: |
-            backend:
-              - 'backend/**'
-              - '!backend/**/*.md'
-            frontend:
-              - 'frontend/**'
-              - '!frontend/**/*.md'
-          base_sha: ${{ github.event.pull_request.base.sha || github.sha }}
-
-      - name: Set lowercase repository variable
-        id: lowercase_repo
-        run: |
-          REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          echo "REPO_LC=$REPO_LC" >> $GITHUB_OUTPUT
-
   build-and-push-backend:
-    needs: setup_build
     runs-on: ubuntu-latest
     environment: production
     permissions:
@@ -47,7 +22,6 @@ jobs:
       contents: read
       attestations: write
       id-token: write
-    if: ${{ needs.setup_build.outputs.backend_changed == 'true' }}
 
     steps:
       - name: Checkout repo
@@ -60,7 +34,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for backend image
+      - name: Extract metadata for backend image
         id: meta_backend
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
@@ -74,11 +48,11 @@ jobs:
           push: true
           tags: |
             ${{ steps.meta_backend.outputs.tags }}
-            ghcr.io/${{ needs.setup_build.outputs.repo_lc }}-backend:dev
+            ghcr.io/${{ github.repository }}-backend:${{ github.event.inputs.version }}
+            ${{ github.event.inputs.set_latest_tag == 'true' && 'ghcr.io/' + github.repository + '-backend:latest' || '' }}
           labels: ${{ steps.meta_backend.outputs.labels }}
 
   build-and-push-frontend:
-    needs: setup_build
     runs-on: ubuntu-latest
     environment: production
     permissions:
@@ -86,7 +60,6 @@ jobs:
       contents: read
       attestations: write
       id-token: write
-    if: ${{ needs.setup_build.outputs.frontend_changed == 'true' }}
 
     steps:
       - name: Checkout repo
@@ -99,7 +72,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for frontend image
+      - name: Extract metadata for frontend image
         id: meta_frontend
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
@@ -113,5 +86,6 @@ jobs:
           push: true
           tags: |
             ${{ steps.meta_frontend.outputs.tags }}
-            ghcr.io/${{ needs.setup_build.outputs.repo_lc }}-frontend:dev
+            ghcr.io/${{ github.repository }}-frontend:${{ github.event.inputs.version }}
+            ${{ github.event.inputs.set_latest_tag == 'true' && 'ghcr.io/' + github.repository + '-frontend:latest' || '' }}
           labels: ${{ steps.meta_frontend.outputs.labels }}
