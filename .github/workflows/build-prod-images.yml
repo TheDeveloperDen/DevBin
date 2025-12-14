@@ -48,7 +48,7 @@ jobs:
       - name: Set latest tag
         id: latest_tag
         run: |
-          if [[ "${{ github.event.inputs.set_latest_tag }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.set_latest_tag }}" == true ]]; then
             echo "latest_tag=ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-backend:latest" >> $GITHUB_OUTPUT
           else
             echo "latest_tag=" >> $GITHUB_OUTPUT
@@ -99,7 +99,7 @@ jobs:
       - name: Set latest tag
         id: latest_tag
         run: |
-          if [[ "${{ github.event.inputs.set_latest_tag }}" == "true" ]]; then
+          if [[ "${{ github.event.inputs.set_latest_tag }}" == true ]]; then
             echo "latest_tag=ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-backend:latest" >> $GITHUB_OUTPUT
           else
             echo "latest_tag=" >> $GITHUB_OUTPUT
