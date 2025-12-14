@@ -74,7 +74,7 @@ jobs:
           push: true
           tags: |
             ${{ steps.meta_backend.outputs.tags }}
-            ghcr.io/${{ needs.setup_build.outputs.repo_lc }}-backend:dev
+            ghcr.io/${{ needs.setup_build.outputs.repo_lc }}-backend-preview:${{ github.event.pull_request.number || github.ref_name }}
           labels: ${{ steps.meta_backend.outputs.labels }}
 
   build-and-push-frontend:
@@ -113,5 +113,5 @@ jobs:
           push: true
           tags: |
             ${{ steps.meta_frontend.outputs.tags }}
-            ghcr.io/${{ needs.setup_build.outputs.repo_lc }}-frontend:dev
+            ghcr.io/${{ needs.setup_build.outputs.repo_lc }}-frontend-preview:${{ github.event.pull_request.number || github.ref_name }}
           labels: ${{ steps.meta_frontend.outputs.labels }}
