@@ -176,7 +176,7 @@ class PasteService:
             # Get the total, used, and free disk space for the base folder path
             total, used, free = shutil.disk_usage(self.paste_base_folder_path)
             # Check if we have enough free space (let's say 100MB minimum)
-            min_free_space = config.MIN_STORAGE_MB * 1024 * 1024  # 100 MB in bytes
+            min_free_space = config.MIN_STORAGE_MB * 1024 * 1024
             if free < min_free_space:
                 self.logger.warning(
                     "Not enough disk space available. Total: %d, Used: %d, Free: %d",
