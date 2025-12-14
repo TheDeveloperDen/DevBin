@@ -1,0 +1,38 @@
+name: devbin
+
+services:
+  devbin_frontend:
+    image: ghcr.io/thedeveloperden/devbin-frontend:latest
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+
+  devbin:
+    image: ghcr.io/thedeveloperden/devbin-backend:latest
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./files:/app/files
+    depends_on:
+      devbin_db:
+        condition: service_healthy
+
+  devbin_db:
+    env_file:
+      - .env
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
