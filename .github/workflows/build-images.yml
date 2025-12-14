@@ -3,7 +3,7 @@ name: Build Images
 on:
   pull_request:
     branches:
-      - main
+      - master
     types: [opened]
   workflow_dispatch:
 
@@ -11,15 +11,15 @@ jobs:
   setup_build:
     runs-on: ubuntu-latest
     outputs:
-      backend_changed: ${{ steps.changed_files.outputs.backend }}
-      frontend_changed: ${{ steps.changed_files.outputs.frontend }}
+      backend_changed: ${{ steps.changed_files.outputs.backend }} || ${{ github.event_name == 'workflow_dispatch' }}
+      frontend_changed: ${{ steps.changed_files.outputs.frontend }} || ${{ github.event_name == 'workflow_dispatch' }}
       repo_lc: ${{ steps.lowercase_repo.outputs.REPO_LC }}
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v5
 
-      - name: Get changes 
+      - name: Get changes
         uses: tj-actions/changed-files@90a06d6ba9543371ab4df8eeca0be07ca6054959
         id: changed_files
         with:
