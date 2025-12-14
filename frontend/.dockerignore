@@ -1,0 +1,7 @@
+autogen files
+.vscode
+.svelte-kit
+.env
+*.md
+node_modules
+dist

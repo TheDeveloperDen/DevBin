@@ -11,7 +11,7 @@ FROM base AS prod
 # copy pnpm lock files and source
 COPY pnpm-lock.yaml /app
 WORKDIR /app
-RUN pnpm fetch --prod
+RUN pnpm install --frozen-lockfile
 
 # build application
 COPY . /app
