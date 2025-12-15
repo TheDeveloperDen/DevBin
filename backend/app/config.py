@@ -5,14 +5,23 @@ from pydantic_settings import BaseSettings
 
 
 class Config(BaseSettings):
+    PORT: int = Field(default=8000, validation_alias="APP_PORT")
+    HOST: str = Field(default="0.0.0.0", validation_alias="APP_HOST")
+
     # DB
-    DATABASE_URL: str = Field(default="postgresql+asyncpg://postgres:postgres@localhost:5432/postgres",
-                              validation_alias="APP_DATABASE_URL")
+    DATABASE_URL: str = Field(
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/postgres",
+        validation_alias="APP_DATABASE_URL",
+    )
     SQLALCHEMY_ECHO: bool = Field(default=False, validation_alias="APP_SQLALCHEMY_ECHO")
 
     # Paste
-    MAX_CONTENT_LENGTH: int = Field(default=10000, validation_alias="APP_MAX_CONTENT_LENGTH")
-    BASE_FOLDER_PATH: str = Field(default="./files", validation_alias="APP_BASE_FOLDER_PATH")
+    MAX_CONTENT_LENGTH: int = Field(
+        default=10000, validation_alias="APP_MAX_CONTENT_LENGTH"
+    )
+    BASE_FOLDER_PATH: str = Field(
+        default="./files", validation_alias="APP_BASE_FOLDER_PATH"
+    )
     WORKERS: int | Literal[True] = Field(default=1, validation_alias="APP_WORKERS")
     BYPASS_TOKEN: str | None = Field(default=None, validation_alias="APP_BYPASS_TOKEN")
 
@@ -24,9 +33,13 @@ class Config(BaseSettings):
     CACHE_SIZE_LIMIT: int = Field(default=1000, validation_alias="APP_CACHE_SIZE_LIMIT")
     CACHE_TTL: int = Field(default=300, validation_alias="APP_CACHE_TTL")
 
-    MIN_STORAGE_MB: int = Field(default=1024, validation_alias="APP_MIN_STORAGE_MB",
-                                description="Minimum storage size in MB free")
+    MIN_STORAGE_MB: int = Field(
+        default=1024,
+        validation_alias="APP_MIN_STORAGE_MB",
+        description="Minimum storage size in MB free",
+    )
 
+    RELOAD: bool = Field(default=False, validation_alias="APP_RELOAD")
     DEBUG: bool = Field(default=False, validation_alias="APP_DEBUG")
 
     model_config = {

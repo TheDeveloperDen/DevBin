@@ -84,9 +84,9 @@ def main():
 
     uvicorn.run(
         "main:app",
-        host=os.getenv("HOST", "0.0.0.0"),
-        port=int(os.getenv("PORT", "8000")),
-        reload=os.getenv("RELOAD", "true").lower() == "true",
+        host=config.HOST,
+        port=int(config.PORT),
+        reload=config.RELOAD,
         server_header=False,
         workers=os.cpu_count() or 1 if config.WORKERS is True else config.WORKERS,
         log_level=None if config.DEBUG else "info",
