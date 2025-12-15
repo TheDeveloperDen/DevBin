@@ -90,6 +90,7 @@ def main():
         server_header=False,
         workers=os.cpu_count() or 1 if config.WORKERS is True else config.WORKERS,
         log_level=None if config.DEBUG else "info",
+        proxy_headers=False,
     )
 
 
