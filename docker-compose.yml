@@ -9,7 +9,6 @@ services:
     env_file:
       - .env
     profiles: ["dev_frontend"]
-
   devbin:
     env_file:
       - .env

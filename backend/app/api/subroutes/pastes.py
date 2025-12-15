@@ -1,21 +1,17 @@
-from typing import Any, Optional
 from uuid import uuid4
 
-import slowapi
 from aiocache.serializers import PickleSerializer
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
-from orjson import orjson
 from pydantic import UUID4
-from slowapi.util import get_ipaddr
 from starlette.requests import Request
 from starlette.responses import Response
 
 from app.api.dto.Error import ErrorResponse
 from app.api.dto.paste_dto import CreatePaste, LegacyPasteResponse, PasteResponse
-from app.config import Config, config
+from app.config import config
 from app.containers import Container
-from app.ratelimit import limiter
+from app.ratelimit import get_ip_address, limiter
 from app.services.paste_service import PasteService
 from app.utils.LRUMemoryCache import LRUMemoryCache
 
@@ -29,7 +25,7 @@ cache = LRUMemoryCache(
 def get_exempt_key(request: Request) -> str:
     auth_header = request.headers.get("Authorization")
     if not auth_header or auth_header != config.BYPASS_TOKEN:
-        return get_ipaddr(request)
+        return get_ip_address(request)
 
     return str(uuid4())  # To simulate a new request if it is the BYPASS_TOKEN
 
