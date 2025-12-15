@@ -4,6 +4,7 @@ import {env} from "$env/dynamic/private";
 import {getUserIpAddress} from "$lib/utils/ip";
 
 export async function load({params, request, getClientAddress}) {
+    console.log(request.headers)
     const client_ip = getUserIpAddress(request, getClientAddress);
     const {id: paste_id} = params;
 
