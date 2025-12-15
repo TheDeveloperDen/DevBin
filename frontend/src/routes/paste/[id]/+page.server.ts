@@ -1,13 +1,10 @@
 import {ApiService} from "$lib/api";
 import type {Paste} from "$lib/types";
 import {env} from "$env/dynamic/private";
+import {getUserIpAddress} from "$lib/utils/ip";
 
 export async function load({params, request, getClientAddress}) {
-    const client_ip =
-        request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
-        request.headers.get("x-real-ip") ||
-        request.headers.get("cf-connecting-ip") || // Cloudflare
-        getClientAddress();
+    const client_ip = getUserIpAddress(request, getClientAddress);
     const {id: paste_id} = params;
 
     try {

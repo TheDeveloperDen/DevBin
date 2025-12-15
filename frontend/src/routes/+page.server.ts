@@ -4,14 +4,12 @@ import type {ContentLanguage, ExpiryValues} from "$lib/types";
 import {convertExpiryValueToDate} from "$lib/utils/date";
 import {ApiService} from "$lib/api";
 import {env} from "$env/dynamic/private";
+import {getUserIpAddress} from "$lib/utils/ip";
 
 export const actions = {
     paste: async ({request, getClientAddress}) => {
-        const client_ip =
-            request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
-            request.headers.get("x-real-ip") ||
-            request.headers.get("cf-connecting-ip") || // Cloudflare
-            getClientAddress();
+        const client_ip = getUserIpAddress(request, getClientAddress);
+
         const data = await request.formData();
         const title = data.get("title")?.toString() || "";
         const expires_at = data.get("expires_at")?.toString() as ExpiryValues;
