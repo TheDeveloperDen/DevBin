@@ -25,6 +25,4 @@ RUN uv sync --extra migrations
 
 EXPOSE $PORT
 
-HEALTHCHECK --interval=15s --timeout=5s --start-period=3s CMD curl -f http://localhost:${APP_PORT:-8000}/health || exit 1
-
 CMD ["uv", "run", "main.py"]
