@@ -5,8 +5,12 @@ import { ApiService } from "$lib/api";
 import type { Paste } from "$lib/types";
 import { env } from "$env/dynamic/private";
 
-export const GET: RequestHandler = async ({ params, getClientAddress }) => {
-  const client_ip = getClientAddress();
+export const GET: RequestHandler = async ({ params, request, getClientAddress }) => {
+  const client_ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+      request.headers.get("x-real-ip") ||
+      request.headers.get("cf-connecting-ip") || // Cloudflare
+      getClientAddress();
   const { id } = params;
 
   let title = "";
