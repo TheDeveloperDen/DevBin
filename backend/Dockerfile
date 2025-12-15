@@ -2,8 +2,8 @@ FROM python:3.13-slim
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-ENV PORT=8000
-ENV RELOAD=false
+ENV APP_PORT=8000
+ENV APP_RELOAD=false
 ENV PATH="/root/.local/bin:$PATH"
 
 WORKDIR /app
@@ -25,6 +25,6 @@ RUN uv sync --extra migrations
 
 EXPOSE $PORT
 
-HEALTHCHECK --interval=15s --timeout=5s --start-period=3s CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+HEALTHCHECK --interval=15s --timeout=5s --start-period=3s CMD curl -f http://localhost:${APP_PORT:-8000}/health || exit 1
 
 CMD ["uv", "run", "main.py"]
