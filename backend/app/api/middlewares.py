@@ -28,10 +28,12 @@ class UserMetadataMiddleware(BaseHTTPMiddleware):
             split_ip = forwarded.split(",")[0].strip()
 
             validated_ip = validate_ip_address(split_ip)
-            if validated_ip and validated_ip.is_private:
-                logging.warning(
-                    f"Forwarded Private IP address: {ip}, maybe behind proxy/docker?"
-                )
+            if validated_ip is not None:
+                if validated_ip.is_private:
+                    logging.warning(
+                        f"Forwarded Private IP address: {ip}, maybe behind proxy/docker?"
+                    )
+                ip = validated_ip
             if validated_ip is None and request.client and request.client.host:
                 try:
                     ip = ipaddress.ip_address(request.client.host)

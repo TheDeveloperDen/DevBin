@@ -1,4 +1,5 @@
 import ipaddress
+import logging
 from typing import Literal
 
 from pydantic import Field, ValidationError, field_validator
@@ -83,7 +84,7 @@ class Config(BaseSettings):
                 validated_host = resolve_hostname(host)
                 if validated_host is not None:
                     validated_hosts.append(validated_host)
-
+        logging.info("Trusted hosts: %s", validated_hosts)
         return validated_hosts
 
 
