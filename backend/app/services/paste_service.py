@@ -115,7 +115,6 @@ class PasteService:
         try:
             async with self.session_maker() as session:
                 current_time = datetime.now(tz=timezone.utc)
-                print(current_time)
                 # Get expired paste IDs
                 stmt = select(PasteEntity.id, PasteEntity.content_path).where(
                     PasteEntity.expires_at < current_time
