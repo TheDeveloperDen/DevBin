@@ -34,8 +34,6 @@ class CreatePaste(BaseModel):
 
     @field_validator("expires_at")
     def validate_expires_at(cls, v):
-        print(v)
-        print(v.tzinfo)
         if v is not None:
             # Ensure timezone-aware datetime
             if v.tzinfo is None:
