@@ -80,7 +80,9 @@ class Config(BaseSettings):
             if validated_ip:
                 validated_hosts.append(validated_ip)
             else:
-                resolve_hostname(host)
+                validated_host = resolve_hostname(host)
+                if validated_host is not None:
+                    validated_hosts.append(validated_host)
 
         return validated_hosts
 
