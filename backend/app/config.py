@@ -1,7 +1,10 @@
+import ipaddress
 from typing import Literal
 
 from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings
+
+from app.utils.ip import resolve_hostname, validate_ip_address
 
 
 class Config(BaseSettings):
@@ -39,6 +42,12 @@ class Config(BaseSettings):
         description="Minimum storage size in MB free",
     )
 
+    TRUSTED_HOSTS: list[str] = Field(
+        default=["127.0.0.1"],
+        validation_alias="APP_TRUSTED_HOSTS",
+        description="Trusted hosts where X-Forwarded-For header is to be trusted",
+    )
+
     RELOAD: bool = Field(default=False, validation_alias="APP_RELOAD")
     DEBUG: bool = Field(default=False, validation_alias="APP_DEBUG")
 
@@ -46,6 +55,7 @@ class Config(BaseSettings):
         "env_file": ".env",
         "env_file_encoding": "utf-8",
         "case_sensitive": False,
+        "extra": "ignore",
     }
 
     @field_validator("DATABASE_URL", mode="after")
@@ -61,6 +71,18 @@ class Config(BaseSettings):
             return ":".join(split_url)
 
         return db_url
+
+    @field_validator("TRUSTED_HOSTS", mode="after")
+    def verify_trusted_hosts(cls, hosts: list[str]) -> list[str]:
+        validated_hosts = []
+        for host in hosts:
+            validated_ip = validate_ip_address(host)
+            if validated_ip:
+                validated_hosts.append(validated_ip)
+            else:
+                resolve_hostname(host)
+
+        return validated_hosts
 
 
 config = Config()

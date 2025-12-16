@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import UUID, Column, DateTime, Integer, String, func, text
+from sqlalchemy import TIMESTAMP, UUID, Column, DateTime, Integer, String, func, text
 
 from app.db.base import Base
 
@@ -14,8 +14,8 @@ class PasteEntity(Base):
     title = Column(String(255), nullable=False)
     content_path = Column(String, nullable=False)
     content_language = Column(String, nullable=False, server_default="plain_text")
-    expires_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, nullable=False, server_default=func.now())
+    expires_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
 
     content_size = Column(Integer, nullable=False)
 

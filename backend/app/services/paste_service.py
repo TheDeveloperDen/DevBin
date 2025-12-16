@@ -5,7 +5,7 @@ import hashlib
 import logging
 import shutil
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from os import path
 from pathlib import Path
 from typing import Coroutine, final
@@ -114,7 +114,8 @@ class PasteService:
 
         try:
             async with self.session_maker() as session:
-                current_time = datetime.now()
+                current_time = datetime.now(tz=timezone.utc)
+                print(current_time)
                 # Get expired paste IDs
                 stmt = select(PasteEntity.id, PasteEntity.content_path).where(
                     PasteEntity.expires_at < current_time
@@ -225,7 +226,7 @@ class PasteService:
                 .where(
                     PasteEntity.id == paste_id,
                     or_(
-                        PasteEntity.expires_at > datetime.now(),
+                        PasteEntity.expires_at > datetime.now(tz=timezone.utc),
                         PasteEntity.expires_at.is_(None),
                     ),
                 )
@@ -237,7 +238,7 @@ class PasteService:
             if result is None:
                 return None
             content = await self._read_content(
-                path.join(self.paste_base_folder_path, result.content_path),  # pyright: ignore[reportUnknownArgumentType]
+                path.join(self.paste_base_folder_path, result.content_path),
             )
             return PasteResponse(
                 id=result.id,
@@ -276,7 +277,7 @@ class PasteService:
                     content_path=paste_path,
                     content_language=paste.content_language.value,
                     expires_at=paste.expires_at,
-                    creator_ip=user_data.ip,
+                    creator_ip=str(user_data.ip),
                     creator_user_agent=user_data.user_agent,
                     content_size=len(paste.content),
                 )

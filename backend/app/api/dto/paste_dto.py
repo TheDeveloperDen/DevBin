@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from uuid import UUID
 
@@ -33,9 +33,19 @@ class CreatePaste(BaseModel):
     )
 
     @field_validator("expires_at")
-    def validate_expires_in(cls, v):
-        if v is not None and v <= datetime.now():
-            raise ValueError("expires_in must be in the future")
+    def validate_expires_at(cls, v):
+        print(v)
+        print(v.tzinfo)
+        if v is not None:
+            # Ensure timezone-aware datetime
+            if v.tzinfo is None:
+                v = v.replace(tzinfo=timezone.utc)
+            else:
+                v = v.astimezone(timezone.utc)
+            # Compare with timezone-aware current time
+            now = datetime.now(timezone.utc)
+            if v < now:
+                raise ValueError("expires_in must be in the future")
         return v
 
 
