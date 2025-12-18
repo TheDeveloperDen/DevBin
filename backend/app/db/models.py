@@ -15,12 +15,20 @@ class PasteEntity(Base):
     content_path = Column(String, nullable=False)
     content_language = Column(String, nullable=False, server_default="plain_text")
     expires_at = Column(TIMESTAMP(timezone=True), nullable=True)
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
+    created_at = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
+    )
 
     content_size = Column(Integer, nullable=False)
 
     creator_ip = Column(String)
     creator_user_agent = Column(String)
+
+    edit_token = Column(String)
+    last_updated_at = Column(TIMESTAMP(timezone=True))
+
+    delete_token = Column(String)
+    deleted_at = Column(TIMESTAMP(timezone=True), nullable=True)
 
     def __repr__(self):
         return f"<Paste(id={self.id}, title='{self.title}')>"

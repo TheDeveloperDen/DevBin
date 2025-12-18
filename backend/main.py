@@ -16,6 +16,7 @@ from app.api.middlewares import UserMetadataMiddleware
 from app.config import config
 from app.containers import Container
 from app.ratelimit import limiter
+from app.services.cleanup_service import CleanupService
 from app.services.paste_service import PasteService
 
 
@@ -33,14 +34,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Initialize resources (e.g., DB engine) and wire dependencies
     await container.init_resources()  # pyright: ignore[reportGeneralTypeIssues]
     container.wire()
-    paste_service: PasteService = (
-        await container.paste_service()  # pyright: ignore[reportGeneralTypeIssues]
+    cleanup_service: CleanupService = (
+        await container.cleanup_service()  # pyright: ignore[reportGeneralTypeIssues]
     )  # or however you resolve it
-    paste_service.start_cleanup_worker()
+    cleanup_service.start_cleanup_worker()
     try:
         yield
     finally:
-        await paste_service.stop_cleanup_worker()
+        await cleanup_service.stop_cleanup_worker()
         await container.shutdown_resources()  # pyright: ignore[reportGeneralTypeIssues]
 
 

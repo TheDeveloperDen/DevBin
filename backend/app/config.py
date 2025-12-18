@@ -43,6 +43,12 @@ class Config(BaseSettings):
         description="Minimum storage size in MB free",
     )
 
+    KEEP_DELETED_PASTES_TIME_HOURS: int = Field(
+        default=336,
+        validation_alias="APP_KEEP_DELETED_PASTES_TIME_HOURS",
+        description="Keep deleted pastes for X hours ( Default 336 hours, 2 weeks, -1 disable, 0 instant )",
+    )
+
     TRUSTED_HOSTS: list[str] = Field(
         default=["127.0.0.1"],
         validation_alias="APP_TRUSTED_HOSTS",

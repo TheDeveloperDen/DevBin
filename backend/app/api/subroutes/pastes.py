@@ -2,13 +2,19 @@ from uuid import uuid4
 
 from aiocache.serializers import PickleSerializer
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import UUID4
 from starlette.requests import Request
 from starlette.responses import Response
 
 from app.api.dto.Error import ErrorResponse
-from app.api.dto.paste_dto import CreatePaste, LegacyPasteResponse, PasteResponse
+from app.api.dto.paste_dto import (
+    CreatePaste,
+    CreatePasteResponse,
+    EditPaste,
+    LegacyPasteResponse,
+    PasteResponse,
+)
 from app.config import config
 from app.containers import Container
 from app.ratelimit import get_ip_address, limiter
@@ -123,7 +129,7 @@ async def get_paste(
     )
 
 
-@pastes_route.post("")
+@pastes_route.post("", response_model=CreatePasteResponse)
 @limiter.limit("4/minute", key_func=get_exempt_key)
 @inject
 async def create_paste(
@@ -134,3 +140,45 @@ async def create_paste(
     return await paste_service.create_paste(
         create_paste_body, request.state.user_metadata
     )
+
+
+@pastes_route.put("/{paste_id}")
+@limiter.limit("4/minute", key_func=get_exempt_key)
+@inject
+async def edit_paste(
+    request: Request,
+    paste_id: UUID4,
+    edit_paste_body: EditPaste,
+    paste_service: PasteService = Depends(Provide[Container.paste_service]),
+):
+    result = await paste_service.edit_paste(paste_id, edit_paste_body)
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail=ErrorResponse(
+                error="paste_not_found",
+                message=f"Paste {paste_id} not found",
+            ).model_dump(),
+        )
+    return result
+
+
+@pastes_route.delete("/{paste_id}")
+@limiter.limit("4/minute", key_func=get_exempt_key)
+@inject
+async def delete_paste(
+    request: Request,
+    paste_id: UUID4,
+    delete_token: str = Header(...),
+    paste_service: PasteService = Depends(Provide[Container.paste_service]),
+):
+    result = await paste_service.delete_paste(paste_id, delete_token)
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail=ErrorResponse(
+                error="paste_not_found",
+                message=f"Paste {paste_id} not found",
+            ).model_dump(),
+        )
+    return {"message": "Paste deleted successfully"}
