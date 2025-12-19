@@ -150,14 +150,14 @@ class PasteService:
             )
 
     async def edit_paste(
-        self, paste_id: UUID4, edit_paste: EditPaste
+        self, paste_id: UUID4, edit_paste: EditPaste, edit_token: str
     ) -> PasteResponse | None:
         async with self.session_maker() as session:
             stmt = (
                 select(PasteEntity)
                 .where(
                     PasteEntity.id == paste_id,
-                    PasteEntity.edit_token == edit_paste.edit_token,
+                    PasteEntity.edit_token == edit_token,
                     or_(
                         PasteEntity.expires_at > datetime.now(tz=timezone.utc),
                         PasteEntity.expires_at.is_(None),
@@ -170,26 +170,40 @@ class PasteService:
             ).scalar_one_or_none()
             if result is None:
                 return None
-            content = edit_paste.content
 
-            # Update content file
-            new_content_path = await self._save_content(
-                str(paste_id),
-                content,
-            )
-            if not new_content_path:
-                return None
+            # Update only the fields that are provided (not None)
+            if (
+                edit_paste.title is not None
+            ):  # Using ellipsis as sentinel for "not provided"
+                result.title = edit_paste.title
+            if edit_paste.content_language is not None:
+                result.content_language = edit_paste.content_language.value
+            if edit_paste.is_expires_at_set():
+                result.expires_at = edit_paste.expires_at
 
-            # Update database entity
-            result.title = edit_paste.title
-            result.content_language = edit_paste.content_language.value
-            result.expires_at = edit_paste.expires_at
-            result.content_path = new_content_path
-            result.content_size = len(content)
+            # Handle content update separately
+            if edit_paste.content is not None:
+                new_content_path = await self._save_content(
+                    str(paste_id), edit_paste.content
+                )
+                if not new_content_path:
+                    return None
+                result.content_path = new_content_path
+                result.content_size = len(edit_paste.content)
+
             result.last_updated_at = datetime.now(tz=timezone.utc)
 
             await session.commit()
             await session.refresh(result)
+
+            # Re-read content if updated
+            content = (
+                edit_paste.content
+                if edit_paste.content is not None
+                else await self._read_content(
+                    path.join(self.paste_base_folder_path, result.content_path)
+                )
+            )
 
             return PasteResponse(
                 id=result.id,

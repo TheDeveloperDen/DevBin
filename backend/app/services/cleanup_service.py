@@ -27,16 +27,16 @@ class CleanupService:
     def start_cleanup_worker(self):
         """Start the background cleanup worker"""
         self.logger.info("Starting cleanup worker")
-        if self._cleanup_task is not None or self._lock_file.exists():
+        if self._cleanup_task is not None:
             return  # Already running
-        _ = self._acquire_lock()
+
         self._cleanup_task = asyncio.create_task(self._cleanup_loop())
         self.logger.info("Background cleanup worker started")
 
     async def stop_cleanup_worker(self):
         """Stop the background cleanup worker"""
         if self._cleanup_task is not None:
-            _ = self._cleanup_task.cancel()
+            self._cleanup_task.cancel()
             try:
                 await self._cleanup_task
             except asyncio.CancelledError:
@@ -46,7 +46,11 @@ class CleanupService:
             self.logger.info("Background cleanup worker stopped")
 
     async def _cleanup_loop(self):
-        """Main cleanup loop that runs every 10 minutes"""
+        """Main cleanup loop that runs every 5 minutes"""
+        # Wait for 5 minutes and retry
+        while not self._acquire_lock():
+            await asyncio.sleep(300)
+
         while True:
             self._touch_lock()
             try:
@@ -58,7 +62,7 @@ class CleanupService:
                     await self._cleanup_deleted_pastes()
 
                 # Wait 5 minutes before next run
-                await asyncio.sleep(300)
+                await asyncio.sleep(600)
             except Exception as exc:
                 self.logger.error("Error in cleanup loop: %s", exc)
                 await asyncio.sleep(60)  # Retry after 1 minute on error

@@ -3,6 +3,8 @@ from uuid import uuid4
 from aiocache.serializers import PickleSerializer
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi.params import Security
+from fastapi.security import APIKeyHeader
 from pydantic import UUID4
 from starlette.requests import Request
 from starlette.responses import Response
@@ -26,6 +28,9 @@ cache = LRUMemoryCache(
     serializer=PickleSerializer(),
     max_size=config.CACHE_SIZE_LIMIT,
 )
+
+edit_token_key_header = APIKeyHeader(name="Authorization", scheme_name="Edit Token")
+delete_token_key_header = APIKeyHeader(name="Authorization", scheme_name="Delete Token")
 
 
 def get_exempt_key(request: Request) -> str:
@@ -149,9 +154,10 @@ async def edit_paste(
     request: Request,
     paste_id: UUID4,
     edit_paste_body: EditPaste,
+    edit_token: str = Security(edit_token_key_header),
     paste_service: PasteService = Depends(Provide[Container.paste_service]),
 ):
-    result = await paste_service.edit_paste(paste_id, edit_paste_body)
+    result = await paste_service.edit_paste(paste_id, edit_paste_body, edit_token)
     if not result:
         raise HTTPException(
             status_code=404,
@@ -169,7 +175,7 @@ async def edit_paste(
 async def delete_paste(
     request: Request,
     paste_id: UUID4,
-    delete_token: str = Header(...),
+    delete_token: str = Security(delete_token_key_header),
     paste_service: PasteService = Depends(Provide[Container.paste_service]),
 ):
     result = await paste_service.delete_paste(paste_id, delete_token)
