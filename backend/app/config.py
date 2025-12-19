@@ -31,6 +31,12 @@ class Config(BaseSettings):
 
     CORS_DOMAINS: list[str] = Field(default=["*"], validation_alias="APP_CORS_DOMAINS")
 
+    ALLOW_CORS_WILDCARD: bool = Field(
+        default=False,
+        validation_alias="APP_ALLOW_CORS_WILDCARD",
+        description="Allow wildcard (*) in CORS domains (disable in production)",
+    )
+
     SAVE_USER_AGENT: bool = Field(default=False, validation_alias="APP_SAVE_USER_AGENT")
     SAVE_IP_ADDRESS: bool = Field(default=False, validation_alias="APP_SAVE_IP_ADDRESS")
 
@@ -57,6 +63,12 @@ class Config(BaseSettings):
 
     RELOAD: bool = Field(default=False, validation_alias="APP_RELOAD")
     DEBUG: bool = Field(default=False, validation_alias="APP_DEBUG")
+
+    ENFORCE_HTTPS: bool = Field(
+        default=False,
+        validation_alias="APP_ENFORCE_HTTPS",
+        description="Enforce HTTPS by redirecting HTTP requests",
+    )
 
     model_config = {
         "env_file": ".env",
@@ -92,6 +104,31 @@ class Config(BaseSettings):
                     validated_hosts.append(validated_host)
         logging.info("Trusted hosts: %s", validated_hosts)
         return validated_hosts
+
+    @field_validator("CORS_DOMAINS", mode="after")
+    def validate_cors_domains(cls, domains: list[str], info) -> list[str]:
+        """Validate CORS domains and warn/error on wildcard."""
+        if "*" in domains:
+            allow_wildcard = info.data.get("ALLOW_CORS_WILDCARD", False)
+
+            if not allow_wildcard:
+                logging.error(
+                    "SECURITY WARNING: CORS wildcard (*) is NOT allowed. "
+                    "Set APP_ALLOW_CORS_WILDCARD=true to enable, "
+                    "or specify exact domains in APP_CORS_DOMAINS."
+                )
+                raise ValueError(
+                    "CORS wildcard (*) is disabled. "
+                    "Set APP_ALLOW_CORS_WILDCARD=true or use specific domains."
+                )
+            else:
+                logging.warning(
+                    "SECURITY WARNING: CORS wildcard (*) allows ANY origin. "
+                    "Use only in development, NEVER in production!"
+                )
+
+        logging.info("CORS domains: %s", domains)
+        return domains
 
 
 config = Config()

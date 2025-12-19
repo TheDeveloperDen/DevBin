@@ -12,7 +12,11 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.cors import CORSMiddleware
 
-from app.api.middlewares import UserMetadataMiddleware
+from app.api.middlewares import (
+    HTTPSRedirectMiddleware,
+    SecurityHeadersMiddleware,
+    UserMetadataMiddleware,
+)
 from app.config import config
 from app.containers import Container
 from app.ratelimit import limiter
@@ -62,16 +66,26 @@ def create_app() -> FastAPI:
         default_response_class=ORJSONResponse,
     )
     apply_rate_limiter(app)
+
+    # Add HTTPS redirect middleware (if enabled)
+    if config.ENFORCE_HTTPS:
+        app.add_middleware(HTTPSRedirectMiddleware)
+
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=config.CORS_DOMAINS,  # Adjust this to your needs
+        allow_origins=config.CORS_DOMAINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
+    # Add security headers middleware
+    app.add_middleware(SecurityHeadersMiddleware)
+
+    # Add user metadata middleware
     app.add_middleware(UserMetadataMiddleware)
+
     app.include_router(router)
     return app
 

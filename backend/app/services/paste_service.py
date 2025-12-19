@@ -30,6 +30,7 @@ from app.api.dto.user_meta_data import UserMetaData
 from app.config import config
 from app.db.models import PasteEntity
 from app.services.cleanup_service import CleanupService
+from app.utils.token_utils import hash_token, is_token_hashed, verify_token
 
 
 class PasteService:
@@ -48,8 +49,6 @@ class PasteService:
         self._lock_file: Path = Path(".cleanup.lock")
         self._cleanup_service: CleanupService = cleanup_service
 
-    def _generate_token(self) -> str:
-        return uuid.uuid4().hex
 
     async def _read_content(self, paste_path: str) -> str | None:
         try:
@@ -157,7 +156,6 @@ class PasteService:
                 select(PasteEntity)
                 .where(
                     PasteEntity.id == paste_id,
-                    PasteEntity.edit_token == edit_token,
                     or_(
                         PasteEntity.expires_at > datetime.now(tz=timezone.utc),
                         PasteEntity.expires_at.is_(None),
@@ -168,7 +166,26 @@ class PasteService:
             result: PasteEntity | None = (
                 await session.execute(stmt)
             ).scalar_one_or_none()
+
             if result is None:
+                return None
+
+            # Verify token - support both hashed (new) and plaintext (legacy)
+            token_valid = False
+            if is_token_hashed(result.edit_token):
+                # New hashed token
+                token_valid = verify_token(edit_token, result.edit_token)
+            else:
+                # Legacy plaintext token (during migration period)
+                token_valid = result.edit_token == edit_token
+                if token_valid:
+                    # Opportunistically upgrade to hashed token
+                    result.edit_token = hash_token(edit_token)
+                    self.logger.info(
+                        "Upgraded edit token to hashed format for paste %s", paste_id
+                    )
+
+            if not token_valid:
                 return None
 
             # Update only the fields that are provided (not None)
@@ -221,7 +238,6 @@ class PasteService:
                 select(PasteEntity)
                 .where(
                     PasteEntity.id == paste_id,
-                    PasteEntity.delete_token == delete_token,
                     or_(
                         PasteEntity.expires_at > datetime.now(tz=timezone.utc),
                         PasteEntity.expires_at.is_(None),
@@ -232,7 +248,21 @@ class PasteService:
             result: PasteEntity | None = (
                 await session.execute(stmt)
             ).scalar_one_or_none()
+
             if result is None:
+                return False
+
+            # Verify token - support both hashed (new) and plaintext (legacy)
+            token_valid = False
+            if is_token_hashed(result.delete_token):
+                # New hashed token
+                token_valid = verify_token(delete_token, result.delete_token)
+            else:
+                # Legacy plaintext token (during migration period)
+                token_valid = result.delete_token == delete_token
+                # No need to upgrade here since we're deleting anyway
+
+            if not token_valid:
                 return False
 
             # Remove file
@@ -267,6 +297,14 @@ class PasteService:
                 headers={"Retry-After": "60"},
             )
         try:
+            # Generate plaintext tokens to return to user
+            edit_token_plaintext = uuid.uuid4().hex
+            delete_token_plaintext = uuid.uuid4().hex
+
+            # Hash tokens for storage
+            edit_token_hashed = hash_token(edit_token_plaintext)
+            delete_token_hashed = hash_token(delete_token_plaintext)
+
             async with self.session_maker() as session:
                 entity: PasteEntity = PasteEntity(
                     id=paste_id,
@@ -277,8 +315,8 @@ class PasteService:
                     creator_ip=str(user_data.ip),
                     creator_user_agent=user_data.user_agent,
                     content_size=len(paste.content),
-                    edit_token=self._generate_token(),
-                    delete_token=self._generate_token(),
+                    edit_token=edit_token_hashed,
+                    delete_token=delete_token_hashed,
                 )
                 session.add(entity)
                 await session.commit()
@@ -292,8 +330,8 @@ class PasteService:
                     created_at=entity.created_at,
                     last_updated_at=entity.last_updated_at,
                     expires_at=entity.expires_at,
-                    edit_token=entity.edit_token,
-                    delete_token=entity.delete_token,
+                    edit_token=edit_token_plaintext,
+                    delete_token=delete_token_plaintext,
                 )
         except Exception as exc:
             self.logger.error("Failed to create paste: %s", exc)

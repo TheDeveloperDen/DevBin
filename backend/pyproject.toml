@@ -23,6 +23,7 @@ dependencies = [
     "aiocache>=0.12.3",
     "fastapi-cors>=0.0.6",
     "ruff>=0.14.9",
+    "argon2-cffi>=23.1.0",
 ]
 [project.optional-dependencies]
 migrations = [
