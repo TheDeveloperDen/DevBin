@@ -2,13 +2,21 @@ from uuid import uuid4
 
 from aiocache.serializers import PickleSerializer
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi.params import Security
+from fastapi.security import APIKeyHeader
 from pydantic import UUID4
 from starlette.requests import Request
 from starlette.responses import Response
 
 from app.api.dto.Error import ErrorResponse
-from app.api.dto.paste_dto import CreatePaste, LegacyPasteResponse, PasteResponse
+from app.api.dto.paste_dto import (
+    CreatePaste,
+    CreatePasteResponse,
+    EditPaste,
+    LegacyPasteResponse,
+    PasteResponse,
+)
 from app.config import config
 from app.containers import Container
 from app.ratelimit import get_ip_address, limiter
@@ -20,6 +28,9 @@ cache = LRUMemoryCache(
     serializer=PickleSerializer(),
     max_size=config.CACHE_SIZE_LIMIT,
 )
+
+edit_token_key_header = APIKeyHeader(name="Authorization", scheme_name="Edit Token")
+delete_token_key_header = APIKeyHeader(name="Authorization", scheme_name="Delete Token")
 
 
 def get_exempt_key(request: Request) -> str:
@@ -123,7 +134,7 @@ async def get_paste(
     )
 
 
-@pastes_route.post("")
+@pastes_route.post("", response_model=CreatePasteResponse)
 @limiter.limit("4/minute", key_func=get_exempt_key)
 @inject
 async def create_paste(
@@ -134,3 +145,46 @@ async def create_paste(
     return await paste_service.create_paste(
         create_paste_body, request.state.user_metadata
     )
+
+
+@pastes_route.put("/{paste_id}")
+@limiter.limit("4/minute", key_func=get_exempt_key)
+@inject
+async def edit_paste(
+    request: Request,
+    paste_id: UUID4,
+    edit_paste_body: EditPaste,
+    edit_token: str = Security(edit_token_key_header),
+    paste_service: PasteService = Depends(Provide[Container.paste_service]),
+):
+    result = await paste_service.edit_paste(paste_id, edit_paste_body, edit_token)
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail=ErrorResponse(
+                error="paste_not_found",
+                message=f"Paste {paste_id} not found",
+            ).model_dump(),
+        )
+    return result
+
+
+@pastes_route.delete("/{paste_id}")
+@limiter.limit("4/minute", key_func=get_exempt_key)
+@inject
+async def delete_paste(
+    request: Request,
+    paste_id: UUID4,
+    delete_token: str = Security(delete_token_key_header),
+    paste_service: PasteService = Depends(Provide[Container.paste_service]),
+):
+    result = await paste_service.delete_paste(paste_id, delete_token)
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail=ErrorResponse(
+                error="paste_not_found",
+                message=f"Paste {paste_id} not found",
+            ).model_dump(),
+        )
+    return {"message": "Paste deleted successfully"}

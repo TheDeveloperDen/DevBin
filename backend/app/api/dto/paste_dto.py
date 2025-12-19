@@ -7,6 +7,13 @@ from pydantic import UUID4, BaseModel, Field, field_validator
 from app.config import config
 
 
+class _Unset(BaseModel):
+    pass
+
+
+UNSET = _Unset()
+
+
 class PasteContentLanguage(str, Enum):
     plain_text = "plain_text"
 
@@ -47,6 +54,34 @@ class CreatePaste(BaseModel):
         return v
 
 
+class EditPaste(BaseModel):
+    title: str | None = Field(
+        None,
+        min_length=1,
+        max_length=255,
+        description="The title of the paste",
+    )
+    content: str | None = Field(
+        None,
+        min_length=1,
+        max_length=config.MAX_CONTENT_LENGTH,
+        description="The content of the paste",
+    )
+    content_language: PasteContentLanguage | None = Field(
+        None,
+        description="The language of the content",
+        examples=[PasteContentLanguage.plain_text],
+    )
+    expires_at: datetime | None | _Unset = Field(
+        default=UNSET,
+        description="The expiration datetime. Explicitly set to null to remove expiration.",
+    )
+
+    def is_expires_at_set(self) -> bool:
+        """Check if expires_at was explicitly provided (including None)."""
+        return not isinstance(self.expires_at, _Unset)
+
+
 class PasteResponse(BaseModel):
     id: UUID4 = Field(
         description="The unique identifier of the paste",
@@ -66,6 +101,19 @@ class PasteResponse(BaseModel):
     )
     created_at: datetime = Field(
         description="The creation timestamp of the paste",
+    )
+    last_updated_at: datetime | None = Field(
+        description="The last time the paste was updated (null = never)",
+    )
+
+
+class CreatePasteResponse(PasteResponse):
+    edit_token: str = Field(
+        description="The token to edit the paste",
+    )
+
+    delete_token: str = Field(
+        description="The token to delete the paste",
     )
 
 

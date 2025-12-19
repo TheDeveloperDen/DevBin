@@ -11,7 +11,9 @@ from app.config import get_config
 
 
 @asynccontextmanager
-async def _engine_resource(db_url: str, echo: bool = False) -> AsyncIterator[AsyncEngine]:
+async def _engine_resource(
+    db_url: str, echo: bool = False
+) -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(db_url, echo=echo, future=True)
     try:
         yield engine
@@ -29,12 +31,14 @@ async def _session_resource(factory: sessionmaker) -> AsyncIterator[AsyncSession
 
 
 class Container(containers.DeclarativeContainer):
-    wiring_config = containers.WiringConfiguration(modules=[
-        "app.api.routes",
-        "app.api.subroutes.pastes",
-        "app.services",
-        "app.dependencies.db",
-    ])
+    wiring_config = containers.WiringConfiguration(
+        modules=[
+            "app.api.routes",
+            "app.api.subroutes.pastes",
+            "app.services",
+            "app.dependencies.db",
+        ]
+    )
 
     config = providers.Callable(get_config)
     # Database engine (async) as a managed resource
@@ -54,14 +58,16 @@ class Container(containers.DeclarativeContainer):
     )
 
     # Services
-    from app.services.health_service import (
-        HealthService,  # local import to avoid cycles during tooling
-    )
+    from app.services.cleanup_service import CleanupService
+    from app.services.health_service import HealthService
     from app.services.paste_service import PasteService
+
     health_service = providers.Factory(HealthService, session_factory)
 
+    cleanup_service = providers.Factory(
+        CleanupService, session_factory, config().BASE_FOLDER_PATH
+    )
+
     paste_service = providers.Factory(
-        PasteService,
-        session_factory,
-        config().BASE_FOLDER_PATH
+        PasteService, session_factory, cleanup_service, config().BASE_FOLDER_PATH
     )
