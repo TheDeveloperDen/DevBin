@@ -12,7 +12,7 @@
     "start": "node dist/index.js",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "update:api-client": "npx @hey-api/openapi-ts -i http://localhost:8000/openapi.json -o src/client"
+    "update:api-client": "pnpm openapi-ts"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^7.0.0",
@@ -20,6 +20,7 @@
     "@sveltejs/kit": "^2.48.5",
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@tailwindcss/vite": "^4.1.17",
+    "@types/node": "^25.0.3",
     "svelte": "^5.43.8",
     "svelte-check": "^4.3.4",
     "tailwindcss": "^4.1.17",
@@ -42,13 +43,15 @@
     "@codemirror/state": "latest",
     "@codemirror/view": "^6.39.4",
     "@ethercorps/sveltekit-og": "^4.2.1",
+    "@hey-api/openapi-ts": "^0.89.1",
     "@lezer/highlight": "^1.2.3",
     "@uiw/codemirror-theme-androidstudio": "^4.25.4",
     "@uiw/codemirror-theme-aura": "^4.25.4",
     "@uiw/codemirror-theme-basic": "^4.25.4",
     "axios": "^1.13.2",
     "codemirror": "^6.0.2",
-    "date-fns": "^4.1.0"
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.2.3"
   },
   "pnpm": {
     "overrides": {

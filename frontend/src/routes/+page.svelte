@@ -3,18 +3,22 @@
     import { enhance, applyAction } from "$app/forms";
     import { goto } from "$app/navigation";
     import CodeEditor from "$lib/components/code-editor.svelte";
-    import { aura } from "@uiw/codemirror-theme-aura";
     import { getLanguageExtension } from "$lib/editor-lang";
+    import { aura } from "@uiw/codemirror-theme-aura";
 
     const ERROR_CLEAR_TIMEOUT = 2500;
     const MAX_PASTE_CONTENT_LENGTH = 10000;
 
     let { form }: PageProps = $props();
 
-    let editorValue = $state(" \n \n \n \n");
+    let editorValue = $state("");
     let errorMessage = $state("");
 
     $effect(() => {
+        if (form?.content && !editorValue) {
+            editorValue = form?.content;
+        }
+
         let errorTimeout = null;
         if (errorMessage && !errorTimeout) {
             errorTimeout = setTimeout(() => {
@@ -22,13 +26,7 @@
             }, ERROR_CLEAR_TIMEOUT);
         }
 
-        if (editorValue) {
-            console.log(editorValue);
-        }
-
-        return () => {
-            errorTimeout = null;
-        };
+        return () => (errorTimeout = null);
     });
 </script>
 
@@ -37,13 +35,7 @@
     action="?/paste"
     class="flex flex-col h-full flex-1"
     use:enhance={async ({ action, formData, formElement }) => {
-        formData.set("content", editorValue);
-        await fetch(action, {
-            method: "POST",
-            body: {
-                ...formData,
-            },
-        });
+        formData.set("content", editorValue.toString());
 
         return async ({ result }) => {
             console.log(result);
