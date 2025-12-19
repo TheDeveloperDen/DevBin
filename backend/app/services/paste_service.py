@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timezone
 from os import path
 from pathlib import Path
-from typing import Coroutine, final
+from typing import Coroutine
 
 import aiofiles
 from aiofiles import os
@@ -17,10 +17,11 @@ from pydantic import UUID4
 from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.util import md5_hex
 
 from app.api.dto.paste_dto import (
     CreatePaste,
+    CreatePasteResponse,
+    EditPaste,
     LegacyPasteResponse,
     PasteContentLanguage,
     PasteResponse,
@@ -28,128 +29,27 @@ from app.api.dto.paste_dto import (
 from app.api.dto.user_meta_data import UserMetaData
 from app.config import config
 from app.db.models import PasteEntity
+from app.services.cleanup_service import CleanupService
 
 
 class PasteService:
     def __init__(
         self,
-        session: sessionmaker[AsyncSession],  # pyright: ignore[reportInvalidTypeArguments]
+        session: sessionmaker[AsyncSession],
+        cleanup_service: CleanupService,
         paste_base_folder_path: str = "",
     ):
-        self.session_maker: sessionmaker[AsyncSession] = session  # pyright: ignore[reportInvalidTypeArguments]
+        self.session_maker: sessionmaker[AsyncSession] = session
         self.paste_base_folder_path: str = (
             paste_base_folder_path  # if it is in a subfolder of the project
         )
         self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
         self._cleanup_task: asyncio.Task[Coroutine[None, None, None]] | None = None
         self._lock_file: Path = Path(".cleanup.lock")
+        self._cleanup_service: CleanupService = cleanup_service
 
-    def start_cleanup_worker(self):
-        """Start the background cleanup worker"""
-        self.logger.info("Starting cleanup worker")
-        if self._cleanup_task is not None or self._lock_file.exists():
-            return  # Already running
-        _ = self._acquire_lock()
-        self._cleanup_task = asyncio.create_task(self._cleanup_loop())
-        self.logger.info("Background cleanup worker started")
-
-    async def stop_cleanup_worker(self):
-        """Stop the background cleanup worker"""
-        if self._cleanup_task is not None:
-            _ = self._cleanup_task.cancel()
-            try:
-                await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
-            self._cleanup_task = None
-            self._release_lock()
-            self.logger.info("Background cleanup worker stopped")
-
-    async def _cleanup_loop(self):
-        """Main cleanup loop that runs every 10 minutes"""
-        while True:
-            self._touch_lock()
-            try:
-                logging.info("Cleaning up expired pastes")
-                # Try to acquire lock (only one worker can run cleanup)
-                await self._cleanup_expired_pastes()
-
-                # Wait 5 minutes before next run
-                await asyncio.sleep(300)
-            except Exception as exc:
-                self.logger.error("Error in cleanup loop: %s", exc)
-                await asyncio.sleep(60)  # Retry after 1 minute on error
-
-    def _touch_lock(self):
-        self._lock_file.touch()
-
-    def _acquire_lock(self) -> bool:
-        """Try to acquire cleanup lock"""
-        try:
-            if self._lock_file.exists():
-                # Check if lock is stale (older than 15 minutes)
-                lock_time = self._lock_file.stat().st_mtime
-                if datetime.now().timestamp() - lock_time < 900:  # 15 minutes
-                    return False  # Lock still valid
-
-            # Create or update lock file
-            self._touch_lock()
-            logging.info("Cleanup lock acquired")
-            return True
-        except Exception as exc:
-            self.logger.error("Failed to acquire cleanup lock: %s", exc)
-            return False
-
-    def _release_lock(self):
-        """Release cleanup lock"""
-        try:
-            if self._lock_file.exists():
-                self._lock_file.unlink()
-        except Exception as exc:
-            self.logger.error("Failed to release cleanup lock: %s", exc)
-
-    async def _cleanup_expired_pastes(self):
-        """Remove expired pastes and their files"""
-        from app.api.subroutes.pastes import cache
-
-        try:
-            async with self.session_maker() as session:
-                current_time = datetime.now(tz=timezone.utc)
-                # Get expired paste IDs
-                stmt = select(PasteEntity.id, PasteEntity.content_path).where(
-                    PasteEntity.expires_at < current_time
-                )
-                result = await session.execute(stmt)
-                expired_pastes = result.fetchall()
-
-                if not expired_pastes:
-                    return
-
-                error: bool = False
-                # Delete from database and Files
-                for paste_id, content_path in expired_pastes:
-                    await cache.delete(paste_id)
-
-                    delete_stmt = delete(PasteEntity).where(PasteEntity.id == paste_id)
-                    file_path = Path(self.paste_base_folder_path) / content_path
-                    try:
-                        if file_path.exists():
-                            file_path.unlink()
-                        await session.execute(delete_stmt)
-                        await session.commit()
-                    except Exception as exc:
-                        error = True
-                        self.logger.error(
-                            "Failed to remove file %s: %s", file_path, exc
-                        )
-                if not error:
-                    delete_stmt = delete(PasteEntity).where(
-                        PasteEntity.expires_at < current_time
-                    )
-                    await session.execute(delete_stmt)
-                    await session.commit()
-        except Exception as exc:
-            self.logger.error("Failed to cleanup expired pastes: %s", exc)
+    def _generate_token(self) -> str:
+        return uuid.uuid4().hex
 
     async def _read_content(self, paste_path: str) -> str | None:
         try:
@@ -246,7 +146,105 @@ class PasteService:
                 content_language=PasteContentLanguage(result.content_language),
                 created_at=result.created_at,
                 expires_at=result.expires_at,
+                last_updated_at=result.last_updated_at,
             )
+
+    async def edit_paste(
+        self, paste_id: UUID4, edit_paste: EditPaste, edit_token: str
+    ) -> PasteResponse | None:
+        async with self.session_maker() as session:
+            stmt = (
+                select(PasteEntity)
+                .where(
+                    PasteEntity.id == paste_id,
+                    PasteEntity.edit_token == edit_token,
+                    or_(
+                        PasteEntity.expires_at > datetime.now(tz=timezone.utc),
+                        PasteEntity.expires_at.is_(None),
+                    ),
+                )
+                .limit(1)
+            )
+            result: PasteEntity | None = (
+                await session.execute(stmt)
+            ).scalar_one_or_none()
+            if result is None:
+                return None
+
+            # Update only the fields that are provided (not None)
+            if (
+                edit_paste.title is not None
+            ):  # Using ellipsis as sentinel for "not provided"
+                result.title = edit_paste.title
+            if edit_paste.content_language is not None:
+                result.content_language = edit_paste.content_language.value
+            if edit_paste.is_expires_at_set():
+                result.expires_at = edit_paste.expires_at
+
+            # Handle content update separately
+            if edit_paste.content is not None:
+                new_content_path = await self._save_content(
+                    str(paste_id), edit_paste.content
+                )
+                if not new_content_path:
+                    return None
+                result.content_path = new_content_path
+                result.content_size = len(edit_paste.content)
+
+            result.last_updated_at = datetime.now(tz=timezone.utc)
+
+            await session.commit()
+            await session.refresh(result)
+
+            # Re-read content if updated
+            content = (
+                edit_paste.content
+                if edit_paste.content is not None
+                else await self._read_content(
+                    path.join(self.paste_base_folder_path, result.content_path)
+                )
+            )
+
+            return PasteResponse(
+                id=result.id,
+                title=result.title,
+                content=content,
+                content_language=PasteContentLanguage(result.content_language),
+                expires_at=result.expires_at,
+                created_at=result.created_at,
+                last_updated_at=result.last_updated_at,
+            )
+
+    async def delete_paste(self, paste_id: UUID4, delete_token: str) -> bool:
+        async with self.session_maker() as session:
+            stmt = (
+                select(PasteEntity)
+                .where(
+                    PasteEntity.id == paste_id,
+                    PasteEntity.delete_token == delete_token,
+                    or_(
+                        PasteEntity.expires_at > datetime.now(tz=timezone.utc),
+                        PasteEntity.expires_at.is_(None),
+                    ),
+                )
+                .limit(1)
+            )
+            result: PasteEntity | None = (
+                await session.execute(stmt)
+            ).scalar_one_or_none()
+            if result is None:
+                return False
+
+            # Remove file
+            try:
+                await self._remove_file(result.content_path)
+            except Exception:
+                pass  # File might already be deleted
+
+            # Delete from database
+            await session.delete(result)
+            await session.commit()
+            return True
 
     async def create_paste(
         self, paste: CreatePaste, user_data: UserMetaData
@@ -279,18 +277,23 @@ class PasteService:
                     creator_ip=str(user_data.ip),
                     creator_user_agent=user_data.user_agent,
                     content_size=len(paste.content),
+                    edit_token=self._generate_token(),
+                    delete_token=self._generate_token(),
                 )
                 session.add(entity)
                 await session.commit()
                 await session.refresh(entity)
 
-                return PasteResponse(
+                return CreatePasteResponse(
                     id=entity.id,
                     title=entity.title,
                     content=paste.content,
                     content_language=PasteContentLanguage(entity.content_language),
                     created_at=entity.created_at,
+                    last_updated_at=entity.last_updated_at,
                     expires_at=entity.expires_at,
+                    edit_token=entity.edit_token,
+                    delete_token=entity.delete_token,
                 )
         except Exception as exc:
             self.logger.error("Failed to create paste: %s", exc)
