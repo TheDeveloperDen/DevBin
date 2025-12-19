@@ -27,9 +27,33 @@
     "vite": "^7.2.2"
   },
   "dependencies": {
+    "@babel/runtime": "^7.28.4",
+    "@codemirror/lang-cpp": "^6.0.3",
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-html": "^6.4.11",
+    "@codemirror/lang-java": "^6.0.2",
     "@codemirror/lang-javascript": "^6.2.4",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/lang-sql": "^6.10.0",
+    "@codemirror/lang-yaml": "^6.1.2",
+    "@codemirror/language": "^6.11.3",
+    "@codemirror/state": "latest",
+    "@codemirror/view": "^6.39.4",
     "@ethercorps/sveltekit-og": "^4.2.1",
-    "date-fns": "^4.1.0",
-    "svelte-codemirror-editor": "^2.1.0"
+    "@lezer/highlight": "^1.2.3",
+    "@uiw/codemirror-theme-androidstudio": "^4.25.4",
+    "@uiw/codemirror-theme-aura": "^4.25.4",
+    "@uiw/codemirror-theme-basic": "^4.25.4",
+    "axios": "^1.13.2",
+    "codemirror": "^6.0.2",
+    "date-fns": "^4.1.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@codemirror/state": "latest",
+      "@codemirror/view": "latest"
+    }
   }
 }

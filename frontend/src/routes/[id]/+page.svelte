@@ -1,7 +1,12 @@
 <script lang="ts">
     import { page } from "$app/state";
+    import CodeEditor from "$lib/components/code-editor.svelte";
+    import { aura } from "@uiw/codemirror-theme-aura";
+    import {
+        getLanguageExtension,
+        type LanguageType,
+    } from "$lib/editor-lang.js";
     import Copy from "$lib/icons/copy.svelte";
-    import { relativeDate } from "$lib/utils/date";
 
     let { data } = $props();
     const MESSAGE_CLEAR_TIMEOUT = 1500;
@@ -65,7 +70,7 @@
                     title: <span class="font-bold md:text-lg">{data.title}</span
                     >
                 </h1>
-                <p class="text-sm">
+                <!-- <p class="text-sm">
                     created: {relativeDate(data.created_at)}
                 </p>
                 <p class="text-sm">
@@ -73,7 +78,7 @@
                         ? relativeDate(data.expires_at)
                         : "never"}
                 </p>
-                <p class="text-sm">length: {data.content.length}</p>
+                <p class="text-sm">length: {data.content.length}</p> -->
             </div>
             <div class="w-full md:w-fit md:h-full">
                 <button
@@ -88,10 +93,12 @@
             </div>
         </div>
         <div class="gap-2 text-end mb-2"></div>
-        <div
-            class="flex-1 overflow-y-scroll border-2 rounded-lg border-neutral-400 p-2"
-        >
-            <p>{data.content}</p>
-        </div>
+        <CodeEditor
+            value={data?.content}
+            extensions={[
+                aura,
+                getLanguageExtension(data?.file_type || "default"),
+            ]}
+        />
     {/if}
 </div>

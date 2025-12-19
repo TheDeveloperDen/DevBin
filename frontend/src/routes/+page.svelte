@@ -1,53 +1,18 @@
 <script lang="ts">
-    import type { ExpiryValues } from "$lib/types";
     import type { PageProps } from "./$types";
     import { enhance, applyAction } from "$app/forms";
     import { goto } from "$app/navigation";
+    import CodeEditor from "$lib/components/code-editor.svelte";
+    import { aura } from "@uiw/codemirror-theme-aura";
+    import { getLanguageExtension } from "$lib/editor-lang";
 
     const ERROR_CLEAR_TIMEOUT = 2500;
     const MAX_PASTE_CONTENT_LENGTH = 10000;
 
     let { form }: PageProps = $props();
 
-    interface FormData {
-        title: string;
-        expires_in: ExpiryValues;
-        content: string;
-    }
-    let formData: FormData = $state({
-        title: "",
-        expires_in: "never",
-        content: "",
-    });
+    let editorValue = $state(" \n \n \n \n");
     let errorMessage = $state("");
-    let success = $state(false);
-
-    function handleSubmit() {
-        try {
-            let cleanedformData: FormData = {
-                title: formData.title.trim(),
-                expires_in: formData.expires_in,
-                content: formData.content.trim(),
-            };
-            // validate data
-            if (!cleanedformData.title) {
-                errorMessage = "Please give your paste a title";
-                return;
-            }
-            if (!cleanedformData.content) {
-                errorMessage = "Please input your paste content";
-                return;
-            }
-            success = true;
-        } catch (error) {
-            console.log(error);
-            error =
-                error instanceof Error
-                    ? error.message
-                    : "Something went wrong. Please try again";
-        } finally {
-        }
-    }
 
     $effect(() => {
         let errorTimeout = null;
@@ -55,6 +20,10 @@
             errorTimeout = setTimeout(() => {
                 errorMessage = "";
             }, ERROR_CLEAR_TIMEOUT);
+        }
+
+        if (editorValue) {
+            console.log(editorValue);
         }
 
         return () => {
@@ -67,7 +36,15 @@
     method="POST"
     action="?/paste"
     class="flex flex-col h-full flex-1"
-    use:enhance={({ formElement }) => {
+    use:enhance={async ({ action, formData, formElement }) => {
+        formData.set("content", editorValue);
+        await fetch(action, {
+            method: "POST",
+            body: {
+                ...formData,
+            },
+        });
+
         return async ({ result }) => {
             console.log(result);
             if (result.type === "success" && result.data && result.data?.id) {
@@ -134,17 +111,13 @@
                 <option value="plain_text">plaintext</option>
             </select>
             <p class="text-end">
-                {formData.content.trim()
+                {editorValue.trim()
                     .length}/{MAX_PASTE_CONTENT_LENGTH.toLocaleString()}
             </p>
         </div>
-        <textarea
-            title="paste content"
-            name="content"
-            value={form?.content}
-            maxlength={MAX_PASTE_CONTENT_LENGTH}
-            placeholder="Your awesome content....."
-            class="input flex-1"
-        ></textarea>
+        <CodeEditor
+            bind:value={editorValue}
+            extensions={[aura, getLanguageExtension("default")]}
+        />
     </div>
 </form>
