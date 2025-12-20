@@ -49,7 +49,6 @@ class PasteService:
         self._lock_file: Path = Path(".cleanup.lock")
         self._cleanup_service: CleanupService = cleanup_service
 
-
     async def _read_content(self, paste_path: str) -> str | None:
         try:
             async with aiofiles.open(paste_path) as f:

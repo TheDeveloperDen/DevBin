@@ -1,0 +1,13 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  dev:frontend:
+    env:
+      APP_DEBUG: true
+    cmd: docker compose --profile dev_frontend up -d --build
+  dev:backend:
+    env:
+      APP_DEBUG: true
+    cmd: docker compose --profile dev_backend up -d --build
