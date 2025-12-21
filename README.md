@@ -140,6 +140,22 @@ APP_RELOAD=true
 APP_SQLALCHEMY_ECHO=true
 ```
 
+### Tests
+
+### Backend Tests
+
+Run tests with:
+
+```bash
+cd backend
+uv run pytest
+```
+
+> If you modified any of the core API endpoints, make sure to run the tests to ensure they still work as expected. Or if
+> you are committing breaking changes, please adjust them and add a note why this breaking change is necessary.
+
+See [Testing](/backend/TESTING.md)
+
 ### API Endpoints
 
 - `GET /health` – Health check

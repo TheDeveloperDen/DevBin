@@ -12,7 +12,7 @@ from app.config import get_config
 
 @asynccontextmanager
 async def _engine_resource(
-    db_url: str, echo: bool = False
+        db_url: str, echo: bool = False
 ) -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(db_url, echo=echo, future=True)
     try:

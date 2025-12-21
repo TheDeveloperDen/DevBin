@@ -1,6 +1,4 @@
-import uuid
-
-from sqlalchemy import TIMESTAMP, UUID, Column, DateTime, Integer, String, func, text
+from sqlalchemy import TIMESTAMP, UUID, Column, Integer, String, func, text
 
 from app.db.base import Base
 

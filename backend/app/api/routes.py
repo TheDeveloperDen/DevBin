@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
-
-from fastapi import APIRouter, Depends
 from dependency_injector.wiring import Provide, inject
+from fastapi import APIRouter, Depends
 from starlette.requests import Request
 
 from app.api.subroutes.pastes import pastes_route

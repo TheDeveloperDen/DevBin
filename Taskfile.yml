@@ -11,3 +11,15 @@ tasks:
     env:
       APP_DEBUG: true
     cmd: docker compose --profile dev_backend up -d --build
+  dev:down:
+    cmds:
+      - docker compose --profile dev_frontend down
+      - docker compose --profile dev_backend down
+      - docker compose --profile dev_db down
+  dev:reset:
+    cmds:
+      - docker compose --profile dev_frontend down
+      - docker compose --profile dev_backend down --volumes
+      - docker compose --profile dev_db down --volumes
+      - docker compose --profile dev_frontend up -d --build
+      - docker compose --profile dev_backend up -d --build
