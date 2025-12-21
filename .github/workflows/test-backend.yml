@@ -44,7 +44,7 @@ jobs:
           version: "latest"
 
       - name: Install dependencies
-        run: uv sync --extra test --extra migration
+        run: uv sync --extra test --extra migrations
 
       - name: Run tests
         env:
