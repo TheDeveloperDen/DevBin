@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from aiocache.serializers import PickleSerializer
 from dependency_injector.wiring import Provide, inject
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.params import Security
 from fastapi.security import APIKeyHeader
 from pydantic import UUID4
@@ -48,9 +48,9 @@ def get_exempt_key(request: Request) -> str:
 @limiter.limit("10/minute", key_func=get_exempt_key)
 @inject
 async def get_paste(
-    request: Request,
-    paste_id: str,
-    paste_service: PasteService = Depends(Provide[Container.paste_service]),
+        request: Request,
+        paste_id: str,
+        paste_service: PasteService = Depends(Provide[Container.paste_service]),
 ):
     cached_result = await cache.get(paste_id)
     if cached_result:
@@ -95,9 +95,9 @@ async def get_paste(
 @limiter.limit("10/minute", key_func=get_exempt_key)
 @inject
 async def get_paste(
-    request: Request,
-    paste_id: UUID4,
-    paste_service: PasteService = Depends(Provide[Container.paste_service]),
+        request: Request,
+        paste_id: UUID4,
+        paste_service: PasteService = Depends(Provide[Container.paste_service]),
 ):
     cached_result = await cache.get(paste_id)
     if cached_result:
@@ -138,9 +138,9 @@ async def get_paste(
 @limiter.limit("4/minute", key_func=get_exempt_key)
 @inject
 async def create_paste(
-    request: Request,
-    create_paste_body: CreatePaste,
-    paste_service: PasteService = Depends(Provide[Container.paste_service]),
+        request: Request,
+        create_paste_body: CreatePaste,
+        paste_service: PasteService = Depends(Provide[Container.paste_service]),
 ):
     return await paste_service.create_paste(
         create_paste_body, request.state.user_metadata
@@ -151,11 +151,11 @@ async def create_paste(
 @limiter.limit("4/minute", key_func=get_exempt_key)
 @inject
 async def edit_paste(
-    request: Request,
-    paste_id: UUID4,
-    edit_paste_body: EditPaste,
-    edit_token: str = Security(edit_token_key_header),
-    paste_service: PasteService = Depends(Provide[Container.paste_service]),
+        request: Request,
+        paste_id: UUID4,
+        edit_paste_body: EditPaste,
+        edit_token: str = Security(edit_token_key_header),
+        paste_service: PasteService = Depends(Provide[Container.paste_service]),
 ):
     result = await paste_service.edit_paste(paste_id, edit_paste_body, edit_token)
     if not result:
@@ -173,10 +173,10 @@ async def edit_paste(
 @limiter.limit("4/minute", key_func=get_exempt_key)
 @inject
 async def delete_paste(
-    request: Request,
-    paste_id: UUID4,
-    delete_token: str = Security(delete_token_key_header),
-    paste_service: PasteService = Depends(Provide[Container.paste_service]),
+        request: Request,
+        paste_id: UUID4,
+        delete_token: str = Security(delete_token_key_header),
+        paste_service: PasteService = Depends(Provide[Container.paste_service]),
 ):
     result = await paste_service.delete_paste(paste_id, delete_token)
     if not result:

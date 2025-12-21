@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from enum import Enum
-from uuid import UUID
 
 from pydantic import UUID4, BaseModel, Field, field_validator
 

@@ -21,7 +21,7 @@ async def _session_scope(factory: sessionmaker) -> AsyncIterator[AsyncSession]:
 
 @inject
 async def get_session(
-    factory: sessionmaker = Provide[Container.session_factory],
+        factory: sessionmaker = Provide[Container.session_factory],
 ) -> AsyncGenerator[AsyncSession, None]:
     async with _session_scope(factory) as session:
         yield session

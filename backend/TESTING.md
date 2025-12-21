@@ -18,6 +18,7 @@ uv sync --extra test
 ```
 
 This will:
+
 - Start PostgreSQL 16 in Docker on port 5433
 - Create the `devbin_test` database
 - Wait for the database to be ready
@@ -83,10 +84,10 @@ docker-compose -f docker-compose.test.yml logs -f
 Tests use environment variables from `pytest.ini` by default:
 
 ```ini
-APP_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/devbin_test
-APP_BASE_FOLDER_PATH=/tmp/devbin_test_files
-APP_DEBUG=true
-APP_ALLOW_CORS_WILDCARD=true
+APP_DATABASE_URL = postgresql+asyncpg://postgres:postgres@localhost:5433/devbin_test
+APP_BASE_FOLDER_PATH = /tmp/devbin_test_files
+APP_DEBUG = true
+APP_ALLOW_CORS_WILDCARD = true
 ```
 
 You can override these by setting environment variables before running tests:
@@ -172,9 +173,9 @@ open htmlcov/index.html  # or xdg-open on Linux
 
 - Overall: 80%+ (enforced in CI)
 - Critical modules: 90%+
-  - `app/services/paste_service.py`
-  - `app/utils/token_utils.py`
-  - `app/api/subroutes/pastes.py`
+    - `app/services/paste_service.py`
+    - `app/utils/token_utils.py`
+    - `app/api/subroutes/pastes.py`
 
 ## Troubleshooting
 
@@ -183,6 +184,7 @@ open htmlcov/index.html  # or xdg-open on Linux
 **Problem**: `connection refused` or `could not connect to server`
 
 **Solution**:
+
 1. Check if test database is running: `docker ps | grep devbin_test`
 2. Start database: `./scripts/setup_test_db.sh`
 3. Check database logs: `docker-compose -f docker-compose.test.yml logs`
@@ -192,6 +194,7 @@ open htmlcov/index.html  # or xdg-open on Linux
 **Problem**: Port 5433 is already in use
 
 **Solution**:
+
 1. Change port in `docker-compose.test.yml`
 2. Update `pytest.ini` to match
 3. Restart database
@@ -201,6 +204,7 @@ open htmlcov/index.html  # or xdg-open on Linux
 **Problem**: Tests pass sometimes, fail other times (flaky tests)
 
 **Solution**:
+
 1. Check if tests are properly isolated (no shared state)
 2. Verify database cleanup between tests
 3. Check for timing issues (use `freezegun` for time-based tests)
@@ -210,6 +214,7 @@ open htmlcov/index.html  # or xdg-open on Linux
 **Problem**: Tests take too long to run
 
 **Solution**:
+
 1. Run tests in parallel: `pytest -n auto`
 2. Run only unit tests: `pytest tests/unit/`
 3. Run specific test file instead of entire suite
@@ -240,6 +245,7 @@ open htmlcov/index.html  # or xdg-open on Linux
 ## Continuous Integration
 
 Tests run automatically on:
+
 - Push to `master` or `develop`
 - Pull requests
 

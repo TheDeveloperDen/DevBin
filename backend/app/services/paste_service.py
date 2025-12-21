@@ -14,7 +14,7 @@ import aiofiles
 from aiofiles import os
 from fastapi import HTTPException
 from pydantic import UUID4
-from sqlalchemy import delete, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
@@ -35,10 +35,10 @@ from app.utils.token_utils import hash_token, is_token_hashed, verify_token
 
 class PasteService:
     def __init__(
-        self,
-        session: sessionmaker[AsyncSession],
-        cleanup_service: CleanupService,
-        paste_base_folder_path: str = "",
+            self,
+            session: sessionmaker[AsyncSession],
+            cleanup_service: CleanupService,
+            paste_base_folder_path: str = "",
     ):
         self.session_maker: sessionmaker[AsyncSession] = session
         self.paste_base_folder_path: str = (
@@ -98,10 +98,10 @@ class PasteService:
             return True
 
     async def get_legacy_paste_by_name(
-        self, paste_id: str
+            self, paste_id: str
     ) -> LegacyPasteResponse | None:
         if not (await os.path.exists(self.paste_base_folder_path)) or not (
-            await os.path.isdir(path.join(self.paste_base_folder_path, "hastebin"))
+                await os.path.isdir(path.join(self.paste_base_folder_path, "hastebin"))
         ):
             return None
         paste_md5: str = hashlib.md5(paste_id.encode()).hexdigest()
@@ -148,7 +148,7 @@ class PasteService:
             )
 
     async def edit_paste(
-        self, paste_id: UUID4, edit_paste: EditPaste, edit_token: str
+            self, paste_id: UUID4, edit_paste: EditPaste, edit_token: str
     ) -> PasteResponse | None:
         async with self.session_maker() as session:
             stmt = (
@@ -189,7 +189,7 @@ class PasteService:
 
             # Update only the fields that are provided (not None)
             if (
-                edit_paste.title is not None
+                    edit_paste.title is not None
             ):  # Using ellipsis as sentinel for "not provided"
                 result.title = edit_paste.title
             if edit_paste.content_language is not None:
@@ -276,7 +276,7 @@ class PasteService:
             return True
 
     async def create_paste(
-        self, paste: CreatePaste, user_data: UserMetaData
+            self, paste: CreatePaste, user_data: UserMetaData
     ) -> PasteResponse:
         if not self.verify_storage_limit():
             raise HTTPException(

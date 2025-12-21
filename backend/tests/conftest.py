@@ -114,8 +114,8 @@ async def test_client(test_container: Container) -> AsyncGenerator[AsyncClient, 
     app.container = test_container
 
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test"
+            transport=ASGITransport(app=app),
+            base_url="http://test"
     ) as client:
         yield client
 

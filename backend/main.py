@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -21,7 +20,6 @@ from app.config import config
 from app.containers import Container
 from app.ratelimit import limiter
 from app.services.cleanup_service import CleanupService
-from app.services.paste_service import PasteService
 
 
 # Set the custom encoder

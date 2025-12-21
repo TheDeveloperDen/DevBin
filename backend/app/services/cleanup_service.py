@@ -14,9 +14,9 @@ from app.db.models import PasteEntity
 
 class CleanupService:
     def __init__(
-        self,
-        session_maker: sessionmaker[AsyncSession],  # pyright: ignore[reportInvalidTypeArguments]
-        paste_base_folder_path: str = "",
+            self,
+            session_maker: sessionmaker[AsyncSession],  # pyright: ignore[reportInvalidTypeArguments]
+            paste_base_folder_path: str = "",
     ):
         self.session_maker: sessionmaker[AsyncSession] = session_maker
         self.paste_base_folder_path: str = paste_base_folder_path

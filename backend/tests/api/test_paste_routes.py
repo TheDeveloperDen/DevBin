@@ -8,7 +8,7 @@ class TestPasteCreationAPI:
     """API tests for paste creation endpoint."""
 
     async def test_create_paste_returns_plaintext_tokens(
-        self, test_client: AsyncClient, sample_paste_data
+            self, test_client: AsyncClient, sample_paste_data
     ):
         """POST /pastes should return plaintext tokens to user."""
         response = await test_client.post("/pastes", json=sample_paste_data)
@@ -25,7 +25,7 @@ class TestPasteCreationAPI:
         assert len(data["delete_token"]) == 32
 
     async def test_get_paste_by_id_returns_content(
-        self, test_client: AsyncClient, authenticated_paste
+            self, test_client: AsyncClient, authenticated_paste
     ):
         """GET /pastes/{id} should return paste content."""
         paste_id = authenticated_paste["id"]

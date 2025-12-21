@@ -12,17 +12,17 @@ from app.utils.ip import validate_ip_address
 
 class UserMetadataMiddleware(BaseHTTPMiddleware):
     def get_ip_address(
-        self, request: Request
+            self, request: Request
     ) -> ipaddress.IPv4Address | ipaddress.IPv6Address | Literal["unknown"]:
         # Try X-Forwarded-For first (proxy headers)
         forwarded = request.headers.get("X-Forwarded-For")
         ip = "unknown"
 
         if (
-            forwarded
-            and request.client
-            and request.client.host
-            and request.client.host in config.TRUSTED_HOSTS
+                forwarded
+                and request.client
+                and request.client.host
+                and request.client.host in config.TRUSTED_HOSTS
         ):
             # Get first IP in the list (original client)
             split_ip = forwarded.split(",")[0].strip()
@@ -121,8 +121,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Check if request came over HTTPS
         # Note: In production behind proxy, check X-Forwarded-Proto header
         is_https = (
-            request.url.scheme == "https"
-            or request.headers.get("X-Forwarded-Proto") == "https"
+                request.url.scheme == "https"
+                or request.headers.get("X-Forwarded-Proto") == "https"
         )
 
         if is_https:
@@ -145,8 +145,8 @@ class HTTPSRedirectMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # Check if request is over HTTPS
         is_https = (
-            request.url.scheme == "https"
-            or request.headers.get("X-Forwarded-Proto") == "https"
+                request.url.scheme == "https"
+                or request.headers.get("X-Forwarded-Proto") == "https"
         )
 
         if not is_https:
