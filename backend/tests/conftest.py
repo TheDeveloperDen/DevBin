@@ -13,6 +13,9 @@ os.environ.setdefault("APP_DEBUG", "true")
 # Use a test domain instead of wildcard to avoid validator issues
 os.environ.setdefault("APP_CORS_DOMAINS", '["http://test"]')
 os.environ.setdefault("APP_ALLOW_CORS_WILDCARD", "false")
+# Set a very high rate limit for tests (essentially disabled)
+os.environ.setdefault("RATELIMIT_STORAGE_URL", "memory://")
+os.environ.setdefault("RATELIMIT_ENABLED", "false")
 
 import pytest
 import pytest_asyncio
@@ -54,6 +57,7 @@ def test_config() -> Config:
         CORS_DOMAINS=["*"],
         ENFORCE_HTTPS=False,
         MIN_STORAGE_MB=1,  # Low threshold for testing
+        BYPASS_TOKEN="test_bypass_token_12345",  # For rate limit testing
     )
 
 
@@ -112,6 +116,9 @@ async def test_client(test_container: Container) -> AsyncGenerator[AsyncClient, 
     """Create FastAPI test client with dependency overrides."""
     app = create_app()
     app.container = test_container
+
+    # Disable rate limiting for tests by removing state
+    app.state.limiter = None
 
     async with AsyncClient(
             transport=ASGITransport(app=app),
