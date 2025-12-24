@@ -1,10 +1,12 @@
 """Integration tests for PasteService."""
+import hashlib
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
@@ -18,6 +20,12 @@ from app.api.dto.user_meta_data import UserMetaData
 from app.db.models import PasteEntity
 from app.services.cleanup_service import CleanupService
 from app.services.paste_service import PasteService
+from tests.constants import (
+    STORAGE_MOCK_TOTAL,
+    STORAGE_MOCK_USED,
+    STORAGE_MOCK_FREE,
+    TIME_TOLERANCE_SECONDS,
+)
 from app.utils.token_utils import hash_token
 
 
@@ -107,7 +115,7 @@ def mock_storage_full(monkeypatch):
     def mock_disk_usage(path):
         # Return: total, used, free (in bytes)
         # Free space less than 1MB (MIN_STORAGE_MB default in test config)
-        return (1000000, 999999, 1)
+        return (STORAGE_MOCK_TOTAL, STORAGE_MOCK_USED, STORAGE_MOCK_FREE)
 
     monkeypatch.setattr("shutil.disk_usage", mock_disk_usage)
 
@@ -202,7 +210,7 @@ class TestPasteServiceCreate:
 
         assert result.expires_at is not None
         # Allow small time difference for test execution
-        assert abs((result.expires_at - expires_at).total_seconds()) < 2
+        assert abs((result.expires_at - expires_at).total_seconds()) < TIME_TOLERANCE_SECONDS
 
     async def test_create_paste_without_expiration(
         self,
@@ -253,7 +261,7 @@ class TestPasteServiceCreate:
             content_language=PasteContentLanguage.plain_text,
         )
 
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             await paste_service.create_paste(paste_dto, sample_user_metadata)
 
         assert exc_info.value.status_code == 500
@@ -268,9 +276,12 @@ class TestPasteServiceCreate:
         """Create paste should clean up file if database commit fails."""
         paste_dto = CreatePaste(
             title="Test",
-            content="Content",
+            content="Content for cleanup test",
             content_language=PasteContentLanguage.plain_text,
         )
+
+        # Track which paste ID was generated
+        captured_paste_id = None
 
         # Mock session commit to raise an exception
         original_maker = paste_service.session_maker
@@ -280,8 +291,18 @@ class TestPasteServiceCreate:
             async with session:
                 # Override commit to raise error
                 original_commit = session.commit
+
                 async def failing_commit():
+                    # Capture the paste ID before failing
+                    nonlocal captured_paste_id
+                    from sqlalchemy import select
+                    result = await session.execute(select(PasteEntity))
+                    pastes = result.scalars().all()
+                    if pastes:
+                        captured_paste_id = pastes[-1].id
+
                     raise Exception("Database error")
+
                 session.commit = failing_commit
                 yield session
 
@@ -291,6 +312,22 @@ class TestPasteServiceCreate:
 
             with pytest.raises(Exception):
                 await paste_service.create_paste(paste_dto, sample_user_metadata)
+
+        # Verify file was cleaned up
+        # Even if we couldn't capture the paste ID, check that no orphaned files exist
+        # Files created during test should have been cleaned up
+        test_files = list(temp_file_storage.glob("*.txt"))
+
+        # If we captured the paste ID, verify that specific file doesn't exist
+        if captured_paste_id:
+            potential_file_path = temp_file_storage / f"{captured_paste_id}.txt"
+            assert not potential_file_path.exists(), \
+                f"File {potential_file_path} should have been deleted after DB error"
+
+        # Also verify no unexpected files were left behind
+        # (Should be 0, or only files from other tests)
+        assert len(test_files) == 0, \
+            f"Expected no orphaned files, but found: {[f.name for f in test_files]}"
 
 
 @pytest.mark.integration
@@ -513,7 +550,7 @@ class TestPasteServiceEdit:
 
         assert result is not None
         assert result.expires_at is not None
-        assert abs((result.expires_at - new_expiration).total_seconds()) < 2
+        assert abs((result.expires_at - new_expiration).total_seconds()) < TIME_TOLERANCE_SECONDS
 
     async def test_edit_paste_fails_with_invalid_token(
         self, paste_service: PasteService, paste_with_file
@@ -670,8 +707,6 @@ class TestPasteServiceLegacy:
         self, paste_service: PasteService, temp_file_storage: Path
     ):
         """Get legacy paste should return content from hastebin directory."""
-        import hashlib
-
         # Create hastebin directory and file
         hastebin_dir = temp_file_storage / "hastebin"
         hastebin_dir.mkdir(parents=True, exist_ok=True)
