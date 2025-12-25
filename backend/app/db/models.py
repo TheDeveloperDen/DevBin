@@ -1,4 +1,4 @@
-from sqlalchemy import TIMESTAMP, UUID, Column, Integer, String, func, text
+from sqlalchemy import TIMESTAMP, UUID, Boolean, Column, Integer, String, func, text
 
 from app.db.base import Base
 
@@ -18,6 +18,8 @@ class PasteEntity(Base):
     )
 
     content_size = Column(Integer, nullable=False)
+    is_compressed = Column(Boolean, nullable=False, server_default='false')
+    original_size = Column(Integer, nullable=True)
 
     creator_ip = Column(String)
     creator_user_agent = Column(String)
