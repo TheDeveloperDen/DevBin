@@ -1,10 +1,14 @@
 import logging
 from typing import Literal
 
+from dotenv import load_dotenv
 from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings
 
 from app.utils.ip import resolve_hostname, validate_ip_address
+
+# Load .env file if it exists
+load_dotenv()
 
 
 class Config(BaseSettings):
@@ -40,13 +44,13 @@ class Config(BaseSettings):
         description="Bearer token for Prometheus metrics endpoint authentication"
     )
 
-    CORS_DOMAINS: list[str] = Field(default=["*"], validation_alias="APP_CORS_DOMAINS")
-
     ALLOW_CORS_WILDCARD: bool = Field(
         default=False,
         validation_alias="APP_ALLOW_CORS_WILDCARD",
         description="Allow wildcard (*) in CORS domains (disable in production)",
     )
+
+    CORS_DOMAINS: list[str] = Field(default=["*"], validation_alias="APP_CORS_DOMAINS")
 
     SAVE_USER_AGENT: bool = Field(default=False, validation_alias="APP_SAVE_USER_AGENT")
     SAVE_IP_ADDRESS: bool = Field(default=False, validation_alias="APP_SAVE_IP_ADDRESS")
@@ -235,6 +239,7 @@ class Config(BaseSettings):
     def validate_cors_domains(cls, domains: list[str], info) -> list[str]:
         """Validate CORS domains and warn/error on wildcard."""
         if "*" in domains:
+            # Check if ALLOW_CORS_WILDCARD is in the data (field name, not alias)
             allow_wildcard = info.data.get("ALLOW_CORS_WILDCARD", False)
 
             if not allow_wildcard:
