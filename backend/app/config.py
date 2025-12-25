@@ -48,6 +48,23 @@ class Config(BaseSettings):
         description="Minimum storage size in MB free",
     )
 
+    # Compression settings
+    COMPRESSION_ENABLED: bool = Field(
+        default=True,
+        validation_alias="APP_COMPRESSION_ENABLED",
+        description="Enable gzip compression for paste content"
+    )
+    COMPRESSION_THRESHOLD_BYTES: int = Field(
+        default=512,
+        validation_alias="APP_COMPRESSION_THRESHOLD_BYTES",
+        description="Minimum content size in bytes to trigger compression"
+    )
+    COMPRESSION_LEVEL: int = Field(
+        default=6,
+        validation_alias="APP_COMPRESSION_LEVEL",
+        description="Gzip compression level (1-9, 6=balanced)"
+    )
+
     KEEP_DELETED_PASTES_TIME_HOURS: int = Field(
         default=336,
         validation_alias="APP_KEEP_DELETED_PASTES_TIME_HOURS",
@@ -128,6 +145,28 @@ class Config(BaseSettings):
 
         logging.info("CORS domains: %s", domains)
         return domains
+
+    @field_validator("COMPRESSION_LEVEL", mode="after")
+    def validate_compression_level(cls, level: int) -> int:
+        """Validate compression level is in valid range."""
+        if not 1 <= level <= 9:
+            logging.warning(
+                "Invalid compression level %d, must be 1-9. Using default 6.",
+                level
+            )
+            return 6
+        return level
+
+    @field_validator("COMPRESSION_THRESHOLD_BYTES", mode="after")
+    def validate_compression_threshold(cls, threshold: int) -> int:
+        """Validate compression threshold is reasonable."""
+        if threshold < 0:
+            logging.warning(
+                "Invalid compression threshold %d, must be >= 0. Using default 512.",
+                threshold
+            )
+            return 512
+        return threshold
 
 
 config = Config()
