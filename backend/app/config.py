@@ -8,6 +8,13 @@ from app.utils.ip import resolve_hostname, validate_ip_address
 
 
 class Config(BaseSettings):
+    # Environment
+    ENVIRONMENT: Literal["dev", "staging", "prod"] = Field(
+        default="dev",
+        validation_alias="APP_ENVIRONMENT",
+        description="Application environment (dev, staging, prod)"
+    )
+
     PORT: int = Field(default=8000, validation_alias="APP_PORT")
     HOST: str = Field(default="0.0.0.0", validation_alias="APP_HOST")
 
@@ -27,6 +34,11 @@ class Config(BaseSettings):
     )
     WORKERS: int | Literal[True] = Field(default=1, validation_alias="APP_WORKERS")
     BYPASS_TOKEN: str | None = Field(default=None, validation_alias="APP_BYPASS_TOKEN")
+    METRICS_TOKEN: str | None = Field(
+        default=None,
+        validation_alias="APP_METRICS_TOKEN",
+        description="Bearer token for Prometheus metrics endpoint authentication"
+    )
 
     CORS_DOMAINS: list[str] = Field(default=["*"], validation_alias="APP_CORS_DOMAINS")
 
@@ -42,6 +54,52 @@ class Config(BaseSettings):
     CACHE_SIZE_LIMIT: int = Field(default=1000, validation_alias="APP_CACHE_SIZE_LIMIT")
     CACHE_TTL: int = Field(default=300, validation_alias="APP_CACHE_TTL")
 
+    # Cache backend configuration
+    CACHE_TYPE: Literal["memory", "redis"] = Field(
+        default="memory",
+        validation_alias="APP_CACHE_TYPE",
+        description="Cache backend type (memory, redis)"
+    )
+    REDIS_HOST: str = Field(
+        default="localhost",
+        validation_alias="APP_REDIS_HOST",
+        description="Redis server host"
+    )
+    REDIS_PORT: int = Field(
+        default=6379,
+        validation_alias="APP_REDIS_PORT",
+        description="Redis server port"
+    )
+    REDIS_DB: int = Field(
+        default=0,
+        validation_alias="APP_REDIS_DB",
+        description="Redis database number"
+    )
+    REDIS_PASSWORD: str | None = Field(
+        default=None,
+        validation_alias="APP_REDIS_PASSWORD",
+        description="Redis password (optional)"
+    )
+
+    # Lock backend configuration
+    LOCK_TYPE: Literal["file", "redis"] = Field(
+        default="file",
+        validation_alias="APP_LOCK_TYPE",
+        description="Lock backend type (file, redis)"
+    )
+
+    # Logging configuration
+    LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
+        default="INFO",
+        validation_alias="APP_LOG_LEVEL",
+        description="Logging level"
+    )
+    LOG_FORMAT: Literal["text", "json"] = Field(
+        default="text",
+        validation_alias="APP_LOG_FORMAT",
+        description="Log output format (text for human-readable, json for structured)"
+    )
+
     MIN_STORAGE_MB: int = Field(
         default=1024,
         validation_alias="APP_MIN_STORAGE_MB",
@@ -55,14 +113,66 @@ class Config(BaseSettings):
         description="Enable gzip compression for paste content"
     )
     COMPRESSION_THRESHOLD_BYTES: int = Field(
-        default=512,
+        default=2048,
         validation_alias="APP_COMPRESSION_THRESHOLD_BYTES",
-        description="Minimum content size in bytes to trigger compression"
+        description="Minimum content size in bytes to trigger compression (2KB+ shows 30-40% compression ratio)"
     )
     COMPRESSION_LEVEL: int = Field(
         default=6,
         validation_alias="APP_COMPRESSION_LEVEL",
         description="Gzip compression level (1-9, 6=balanced)"
+    )
+
+    # Storage settings
+    STORAGE_TYPE: Literal["local", "s3", "minio"] = Field(
+        default="local",
+        validation_alias="APP_STORAGE_TYPE",
+        description="Storage backend type (local, s3, minio)"
+    )
+    S3_BUCKET_NAME: str = Field(
+        default="",
+        validation_alias="APP_S3_BUCKET_NAME",
+        description="S3 bucket name"
+    )
+    S3_REGION: str = Field(
+        default="us-east-1",
+        validation_alias="APP_S3_REGION",
+        description="AWS region for S3"
+    )
+    S3_ACCESS_KEY: str = Field(
+        default="",
+        validation_alias="APP_S3_ACCESS_KEY",
+        description="S3 access key ID"
+    )
+    S3_SECRET_KEY: str = Field(
+        default="",
+        validation_alias="APP_S3_SECRET_KEY",
+        description="S3 secret access key"
+    )
+    S3_ENDPOINT_URL: str | None = Field(
+        default=None,
+        validation_alias="APP_S3_ENDPOINT_URL",
+        description="Custom S3 endpoint URL (for S3-compatible services)"
+    )
+    MINIO_ENDPOINT: str = Field(
+        default="",
+        validation_alias="APP_MINIO_ENDPOINT",
+        description="MinIO server endpoint (e.g., 'minio:9000')"
+    )
+    MINIO_ACCESS_KEY: str = Field(
+        default="",
+        validation_alias="APP_MINIO_ACCESS_KEY",
+        description="MinIO access key"
+    )
+    MINIO_SECRET_KEY: str = Field(
+        default="",
+        validation_alias="APP_MINIO_SECRET_KEY",
+        description="MinIO secret key"
+    )
+    MINIO_SECURE: bool = Field(
+        default=True,
+        validation_alias="APP_MINIO_SECURE",
+        description="Use HTTPS for MinIO connection"
     )
 
     KEEP_DELETED_PASTES_TIME_HOURS: int = Field(
@@ -167,6 +277,45 @@ class Config(BaseSettings):
             )
             return 512
         return threshold
+
+    def model_post_init(self, __context):
+        """Post-initialization validation for environment-specific rules."""
+        if self.ENVIRONMENT == "prod":
+            # Production security validations
+            if self.DEBUG:
+                logging.error(
+                    "PRODUCTION ERROR: DEBUG mode is enabled in production. "
+                    "Set APP_DEBUG=false"
+                )
+                raise ValueError("DEBUG must be False in production")
+
+            if "*" in self.CORS_DOMAINS:
+                logging.error(
+                    "PRODUCTION ERROR: CORS wildcard (*) is not allowed in production. "
+                    "Set specific domains in APP_CORS_DOMAINS"
+                )
+                raise ValueError("CORS wildcard not allowed in production")
+
+            if self.RELOAD:
+                logging.warning(
+                    "PRODUCTION WARNING: Auto-reload is enabled in production. "
+                    "Set APP_RELOAD=false for better performance"
+                )
+
+            if self.LOG_FORMAT != "json":
+                logging.warning(
+                    "PRODUCTION WARNING: Log format is not JSON. "
+                    "Set APP_LOG_FORMAT=json for structured logging in production"
+                )
+
+            # Warn if metrics endpoint is not secured in production
+            if not self.METRICS_TOKEN:
+                logging.warning(
+                    "PRODUCTION WARNING: Metrics endpoint is not secured. "
+                    "Set APP_METRICS_TOKEN to enable authentication for /metrics"
+                )
+
+            logging.info("Production environment validated successfully")
 
 
 config = Config()

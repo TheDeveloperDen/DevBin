@@ -1,4 +1,4 @@
-from sqlalchemy import TIMESTAMP, UUID, Boolean, Column, Integer, String, func, text
+from sqlalchemy import TIMESTAMP, UUID, Boolean, Column, Index, Integer, String, func, text
 
 from app.db.base import Base
 
@@ -7,6 +7,11 @@ UUID_DEFAULT = text("gen_random_uuid()")
 
 class PasteEntity(Base):
     __tablename__ = "pastes"
+    __table_args__ = (
+        Index('idx_pastes_expires_at', 'expires_at'),
+        Index('idx_pastes_deleted_at', 'deleted_at'),
+        Index('idx_pastes_created_at', 'created_at'),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=UUID_DEFAULT)
     title = Column(String(255), nullable=False)

@@ -20,6 +20,7 @@ from app.api.dto.user_meta_data import UserMetaData
 from app.db.models import PasteEntity
 from app.services.cleanup_service import CleanupService
 from app.services.paste_service import PasteService
+from app.storage.local_storage import LocalStorageClient
 from tests.constants import (
     STORAGE_MOCK_TOTAL,
     STORAGE_MOCK_USED,
@@ -38,10 +39,11 @@ async def paste_service(
         test_db_engine, class_=AsyncSession, expire_on_commit=False
     )
     cleanup_service = MagicMock(spec=CleanupService)
+    storage_client = LocalStorageClient(base_path=str(temp_file_storage))
     return PasteService(
         session=session_maker,
         cleanup_service=cleanup_service,
-        paste_base_folder_path=str(temp_file_storage),
+        storage_client=storage_client,
     )
 
 

@@ -26,6 +26,19 @@ dependencies = [
 migrations = [
     "psycopg2-binary",
 ]
+storage = [
+    "aioboto3>=12.0.0",  # For S3/MinIO storage backends
+]
+redis = [
+    "redis>=5.0.0",  # For Redis cache and distributed locking
+    "aiocache[redis]>=0.12.3",  # For Redis cache backend
+]
+logging = [
+    "structlog>=23.1.0",  # For structured JSON logging
+]
+metrics = [
+    "prometheus-client>=0.17.0",  # For Prometheus metrics and monitoring
+]
 dev = [
     "ruff>=0.14.9",
 ]

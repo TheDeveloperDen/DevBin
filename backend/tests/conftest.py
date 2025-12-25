@@ -114,6 +114,11 @@ async def test_client(test_container: Container) -> AsyncGenerator[AsyncClient, 
     app = create_app()
     app.container = test_container
 
+    # Set cache for pastes route (required for tests)
+    from app.api.subroutes.pastes import set_cache
+    cache_instance = test_container.cache_client()
+    set_cache(cache_instance)
+
     # Disable rate limiting for tests by removing state
     app.state.limiter = None
 
@@ -122,6 +127,42 @@ async def test_client(test_container: Container) -> AsyncGenerator[AsyncClient, 
             base_url="http://test"
     ) as client:
         yield client
+
+
+@pytest_asyncio.fixture(scope="function")
+async def test_client_with_metrics_auth(
+    test_container: Container
+) -> AsyncGenerator[AsyncClient, None]:
+    """Create FastAPI test client with metrics authentication enabled."""
+    import os
+    from app.config import config as global_config
+
+    # Temporarily set metrics token
+    original_token = os.environ.get("APP_METRICS_TOKEN")
+    os.environ["APP_METRICS_TOKEN"] = "test_metrics_token_12345"
+    global_config.METRICS_TOKEN = "test_metrics_token_12345"
+
+    try:
+        app = create_app()
+        app.container = test_container
+
+        from app.api.subroutes.pastes import set_cache
+        cache_instance = test_container.cache_client()
+        set_cache(cache_instance)
+
+        app.state.limiter = None  # Disable rate limiting
+
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test"
+        ) as client:
+            yield client
+    finally:
+        if original_token:
+            os.environ["APP_METRICS_TOKEN"] = original_token
+        else:
+            os.environ.pop("APP_METRICS_TOKEN", None)
+        global_config.METRICS_TOKEN = None
 
 
 @pytest.fixture

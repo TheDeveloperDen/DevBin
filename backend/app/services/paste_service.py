@@ -30,6 +30,7 @@ from app.api.dto.user_meta_data import UserMetaData
 from app.config import config
 from app.db.models import PasteEntity
 from app.services.cleanup_service import CleanupService
+from app.storage import StorageClient
 from app.utils.token_utils import hash_token, is_token_hashed, verify_token
 
 
@@ -38,12 +39,10 @@ class PasteService:
             self,
             session: sessionmaker[AsyncSession],
             cleanup_service: CleanupService,
-            paste_base_folder_path: str = "",
+            storage_client: StorageClient,
     ):
         self.session_maker: sessionmaker[AsyncSession] = session
-        self.paste_base_folder_path: str = (
-            paste_base_folder_path  # if it is in a subfolder of the project
-        )
+        self.storage_client: StorageClient = storage_client
         self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
         self._cleanup_task: asyncio.Task[Coroutine[None, None, None]] | None = None
         self._lock_file: Path = Path(".cleanup.lock")
@@ -56,28 +55,30 @@ class PasteService:
         Read paste content, handling decompression if needed.
 
         Args:
-            paste_path: Path to the paste file
+            paste_path: Storage key for the paste
             is_compressed: Whether the content is compressed
 
         Returns:
             Decompressed content string or None on error
         """
         try:
+            data = await self.storage_client.get_object(paste_path)
+            if data is None:
+                self.logger.error("Paste content not found: %s", paste_path)
+                return None
+
             if is_compressed:
                 from app.utils.compression import CompressionError, decompress_content
 
-                async with aiofiles.open(paste_path, "rb") as f:
-                    compressed_data = await f.read()
                 try:
-                    return decompress_content(compressed_data)
+                    return decompress_content(data)
                 except CompressionError as exc:
                     self.logger.error(
                         "Failed to decompress paste at %s: %s", paste_path, exc
                     )
                     return None
             else:
-                async with aiofiles.open(paste_path) as f:
-                    return await f.read()
+                return data.decode('utf-8')
         except Exception as exc:
             self.logger.error("Failed to read paste content: %s", exc)
             return None
@@ -132,38 +133,43 @@ class PasteService:
                         exc,
                     )
 
-            # Prepare file path
-            base_file_path = path.join("pastes", f"{paste_id}.txt")
-            file_path = path.join(self.paste_base_folder_path, base_file_path)
-            await os.makedirs(path.dirname(file_path), exist_ok=True)
+            # Prepare storage key
+            storage_key = f"pastes/{paste_id}.txt"
 
             # Write content (compressed or uncompressed)
             if use_compression and compressed_data:
-                async with aiofiles.open(file_path, "wb") as f:
-                    await f.write(compressed_data)
+                await self.storage_client.put_object(storage_key, compressed_data)
                 content_size = len(compressed_data)
-                return base_file_path, content_size, True, original_size
+                return storage_key, content_size, True, original_size
             else:
-                async with aiofiles.open(file_path, "w") as f:
-                    await f.write(content)
+                await self.storage_client.put_object(storage_key, content.encode('utf-8'))
                 content_size = original_size
-                return base_file_path, content_size, False, None
+                return storage_key, content_size, False, None
 
         except Exception as exc:
             self.logger.error("Failed to save paste content: %s", exc)
             return None
 
-    async def _remove_file(self, paste_path: str):
+    async def _remove_file(self, storage_key: str):
+        """Remove paste file from storage."""
         try:
-            await os.remove(paste_path)
+            await self.storage_client.delete_object(storage_key)
         except Exception as exc:
-            self.logger.error("Failed to remove file %s: %s", paste_path, exc)
+            self.logger.error("Failed to remove file %s: %s", storage_key, exc)
 
     def verify_storage_limit(self):
+        """Verify storage limit (only applicable for local storage)."""
         try:
+            # Only check disk usage for local storage
+            from app.storage.local_storage import LocalStorageClient
+
+            if not isinstance(self.storage_client, LocalStorageClient):
+                # Skip storage limit check for cloud storage (S3, MinIO)
+                return True
+
             # Get the total, used, and free disk space for the base folder path
-            total, used, free = shutil.disk_usage(self.paste_base_folder_path)
-            # Check if we have enough free space (let's say 100MB minimum)
+            total, used, free = shutil.disk_usage(self.storage_client.base_path)
+            # Check if we have enough free space
             min_free_space = config.MIN_STORAGE_MB * 1024 * 1024
             if free < min_free_space:
                 self.logger.warning(
@@ -183,20 +189,17 @@ class PasteService:
     async def get_legacy_paste_by_name(
             self, paste_id: str
     ) -> LegacyPasteResponse | None:
-        if not (await os.path.exists(self.paste_base_folder_path)) or not (
-                await os.path.isdir(path.join(self.paste_base_folder_path, "hastebin"))
-        ):
-            return None
+        """Get legacy Hastebin-format paste."""
         paste_md5: str = hashlib.md5(paste_id.encode()).hexdigest()
-        file_path = path.join(self.paste_base_folder_path, "hastebin", paste_md5)
+        storage_key = f"hastebin/{paste_md5}"
 
         try:
-            if await os.path.exists(file_path):
-                async with aiofiles.open(file_path, "r") as f:
-                    content = await f.read()
+            data = await self.storage_client.get_object(storage_key)
+            if data is not None:
+                content = data.decode('utf-8')
                 return LegacyPasteResponse(content=content)
-        except (OSError, IOError):
-            pass
+        except Exception as exc:
+            self.logger.debug("Legacy paste not found: %s", exc)
         return None
 
     async def get_paste_by_id(self, paste_id: UUID4) -> PasteResponse | None:
@@ -218,7 +221,7 @@ class PasteService:
             if result is None:
                 return None
             content = await self._read_content(
-                path.join(self.paste_base_folder_path, result.content_path),
+                result.content_path,
                 is_compressed=result.is_compressed,
             )
             return PasteResponse(
@@ -309,7 +312,7 @@ class PasteService:
                 edit_paste.content
                 if edit_paste.content is not None
                 else await self._read_content(
-                    path.join(self.paste_base_folder_path, result.content_path),
+                    result.content_path,
                     is_compressed=result.is_compressed,
                 )
             )

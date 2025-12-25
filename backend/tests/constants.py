@@ -4,6 +4,7 @@ Centralized test constants to avoid duplication across test files.
 
 # Authentication & Authorization
 TEST_BYPASS_TOKEN = "test_bypass_token_12345"
+TEST_METRICS_TOKEN = "test_metrics_token_12345"
 TEST_TOKEN_LENGTH = 32
 
 # Database Configuration

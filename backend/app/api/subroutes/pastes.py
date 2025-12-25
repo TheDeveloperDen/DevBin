@@ -1,6 +1,6 @@
+import logging
 from uuid import uuid4
 
-from aiocache.serializers import PickleSerializer
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.params import Security
@@ -21,13 +21,20 @@ from app.config import config
 from app.containers import Container
 from app.ratelimit import get_ip_address, limiter
 from app.services.paste_service import PasteService
-from app.utils.LRUMemoryCache import LRUMemoryCache
+
+logger = logging.getLogger(__name__)
 
 pastes_route = APIRouter(prefix="/pastes", tags=["Paste"])
-cache = LRUMemoryCache(
-    serializer=PickleSerializer(),
-    max_size=config.CACHE_SIZE_LIMIT,
-)
+
+# Cache will be set during container initialization
+cache = None
+
+
+def set_cache(cache_instance):
+    """Set the cache instance from the container."""
+    global cache
+    cache = cache_instance
+
 
 edit_token_key_header = APIKeyHeader(name="Authorization", scheme_name="Edit Token")
 delete_token_key_header = APIKeyHeader(name="Authorization", scheme_name="Delete Token")
@@ -166,6 +173,8 @@ async def edit_paste(
                 message=f"Paste {paste_id} not found",
             ).model_dump(),
         )
+    # Invalidate cache after successful edit
+    await cache.delete(paste_id)
     return result
 
 
@@ -187,4 +196,6 @@ async def delete_paste(
                 message=f"Paste {paste_id} not found",
             ).model_dump(),
         )
+    # Invalidate cache after successful delete
+    await cache.delete(paste_id)
     return {"message": "Paste deleted successfully"}
