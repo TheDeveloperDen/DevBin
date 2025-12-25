@@ -740,3 +740,126 @@ class TestPasteServiceLegacy:
         result = await paste_service.get_legacy_paste_by_name("nonexistent")
 
         assert result is None
+
+
+@pytest.mark.integration
+class TestPasteServiceCompression:
+    """Tests for paste compression functionality."""
+
+    async def test_create_paste_compresses_large_content(
+        self,
+        paste_service: PasteService,
+        sample_user_metadata: UserMetaData,
+        temp_file_storage: Path,
+    ):
+        """Create paste should compress content above threshold."""
+        # Create content above 512-byte threshold
+        large_content = "This is test content that will be compressed. " * 50
+        paste_dto = CreatePaste(
+            title="Large Paste",
+            content=large_content,
+            content_language=PasteContentLanguage.plain_text,
+        )
+
+        result = await paste_service.create_paste(paste_dto, sample_user_metadata)
+
+        # Verify database metadata
+        async with paste_service.session_maker() as session:
+            stmt = select(PasteEntity).where(PasteEntity.id == result.id)
+            db_paste = (await session.execute(stmt)).scalar_one()
+
+            assert db_paste.is_compressed is True
+            assert db_paste.original_size is not None
+            assert db_paste.original_size > db_paste.content_size
+
+            # Verify file on disk is gzip-compressed
+            file_path = temp_file_storage / db_paste.content_path
+            assert file_path.exists()
+            file_content = file_path.read_bytes()
+            # Check for gzip magic number
+            assert file_content.startswith(b"\x1f\x8b")
+
+    async def test_create_paste_does_not_compress_small_content(
+        self,
+        paste_service: PasteService,
+        sample_user_metadata: UserMetaData,
+    ):
+        """Create paste should not compress content below threshold."""
+        small_content = "Small paste"
+        paste_dto = CreatePaste(
+            title="Small Paste",
+            content=small_content,
+            content_language=PasteContentLanguage.plain_text,
+        )
+
+        result = await paste_service.create_paste(paste_dto, sample_user_metadata)
+
+        # Verify database metadata
+        async with paste_service.session_maker() as session:
+            stmt = select(PasteEntity).where(PasteEntity.id == result.id)
+            db_paste = (await session.execute(stmt)).scalar_one()
+
+            assert db_paste.is_compressed is False
+            assert db_paste.original_size is None
+            assert db_paste.content_size == len(small_content.encode('utf-8'))
+
+    async def test_get_compressed_paste_returns_original_content(
+        self,
+        paste_service: PasteService,
+        sample_user_metadata: UserMetaData,
+    ):
+        """Get paste should decompress compressed content correctly."""
+        # Create compressed paste with large content
+        large_content = "This is test content that will be compressed. " * 50
+        paste_dto = CreatePaste(
+            title="Compressed Paste",
+            content=large_content,
+            content_language=PasteContentLanguage.plain_text,
+        )
+
+        created_paste = await paste_service.create_paste(paste_dto, sample_user_metadata)
+
+        # Read it back
+        retrieved_paste = await paste_service.get_paste_by_id(created_paste.id)
+
+        assert retrieved_paste is not None
+        assert retrieved_paste.content == large_content
+
+    async def test_backward_compatibility_with_uncompressed_pastes(
+        self,
+        paste_service: PasteService,
+        temp_file_storage: Path,
+    ):
+        """Get paste should handle legacy uncompressed pastes correctly."""
+        # Manually create an uncompressed paste (simulating legacy data)
+        paste_id = uuid.uuid4()
+        paste_path = f"pastes/{paste_id}.txt"
+        full_path = temp_file_storage / paste_path
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+
+        legacy_content = "This is a legacy uncompressed paste"
+        full_path.write_text(legacy_content)
+
+        # Insert database record with is_compressed=False, original_size=None
+        async with paste_service.session_maker() as session:
+            entity = PasteEntity(
+                id=paste_id,
+                title="Legacy Paste",
+                content_path=paste_path,
+                content_language="plain_text",
+                creator_ip="127.0.0.1",
+                creator_user_agent="Test",
+                content_size=len(legacy_content.encode('utf-8')),
+                is_compressed=False,
+                original_size=None,
+                edit_token=hash_token("edit123"),
+                delete_token=hash_token("delete123"),
+            )
+            session.add(entity)
+            await session.commit()
+
+        # Read with get_paste_by_id
+        result = await paste_service.get_paste_by_id(paste_id)
+
+        assert result is not None
+        assert result.content == legacy_content
