@@ -49,23 +49,106 @@ class PasteService:
         self._lock_file: Path = Path(".cleanup.lock")
         self._cleanup_service: CleanupService = cleanup_service
 
-    async def _read_content(self, paste_path: str) -> str | None:
+    async def _read_content(
+        self, paste_path: str, is_compressed: bool = False
+    ) -> str | None:
+        """
+        Read paste content, handling decompression if needed.
+
+        Args:
+            paste_path: Path to the paste file
+            is_compressed: Whether the content is compressed
+
+        Returns:
+            Decompressed content string or None on error
+        """
         try:
-            async with aiofiles.open(paste_path) as f:
-                return await f.read()
+            if is_compressed:
+                from app.utils.compression import CompressionError, decompress_content
+
+                async with aiofiles.open(paste_path, "rb") as f:
+                    compressed_data = await f.read()
+                try:
+                    return decompress_content(compressed_data)
+                except CompressionError as exc:
+                    self.logger.error(
+                        "Failed to decompress paste at %s: %s", paste_path, exc
+                    )
+                    return None
+            else:
+                async with aiofiles.open(paste_path) as f:
+                    return await f.read()
         except Exception as exc:
             self.logger.error("Failed to read paste content: %s", exc)
             return None
 
-    async def _save_content(self, paste_id: str, content: str) -> str | None:
+    async def _save_content(
+        self, paste_id: str, content: str
+    ) -> tuple[str, int, bool, int | None] | None:
+        """
+        Save paste content, optionally compressed.
+
+        Returns:
+            Tuple of (content_path, content_size, is_compressed, original_size) or None
+        """
         try:
+            from app.utils.compression import (
+                CompressionError,
+                compress_content,
+                should_compress,
+            )
+
+            # Determine if we should compress
+            use_compression = False
+            compressed_data = None
+            original_size = len(content.encode('utf-8'))
+
+            if config.COMPRESSION_ENABLED and should_compress(
+                content, config.COMPRESSION_THRESHOLD_BYTES
+            ):
+                try:
+                    compressed_data, original_size = compress_content(
+                        content, config.COMPRESSION_LEVEL
+                    )
+                    # Only use compression if it actually saves space
+                    if len(compressed_data) < original_size:
+                        use_compression = True
+                        self.logger.info(
+                            "Compressed paste %s: %d -> %d bytes (%.1f%% reduction)",
+                            paste_id,
+                            original_size,
+                            len(compressed_data),
+                            100 * (1 - len(compressed_data) / original_size),
+                        )
+                    else:
+                        self.logger.debug(
+                            "Compression not beneficial for paste %s, storing uncompressed",
+                            paste_id,
+                        )
+                except CompressionError as exc:
+                    self.logger.warning(
+                        "Compression failed for paste %s, storing uncompressed: %s",
+                        paste_id,
+                        exc,
+                    )
+
+            # Prepare file path
             base_file_path = path.join("pastes", f"{paste_id}.txt")
             file_path = path.join(self.paste_base_folder_path, base_file_path)
             await os.makedirs(path.dirname(file_path), exist_ok=True)
-            async with aiofiles.open(file_path, "w") as f:
-                await f.write(content)
 
-            return base_file_path
+            # Write content (compressed or uncompressed)
+            if use_compression and compressed_data:
+                async with aiofiles.open(file_path, "wb") as f:
+                    await f.write(compressed_data)
+                content_size = len(compressed_data)
+                return base_file_path, content_size, True, original_size
+            else:
+                async with aiofiles.open(file_path, "w") as f:
+                    await f.write(content)
+                content_size = original_size
+                return base_file_path, content_size, False, None
+
         except Exception as exc:
             self.logger.error("Failed to save paste content: %s", exc)
             return None
@@ -136,6 +219,7 @@ class PasteService:
                 return None
             content = await self._read_content(
                 path.join(self.paste_base_folder_path, result.content_path),
+                is_compressed=result.is_compressed,
             )
             return PasteResponse(
                 id=result.id,
@@ -199,13 +283,21 @@ class PasteService:
 
             # Handle content update separately
             if edit_paste.content is not None:
-                new_content_path = await self._save_content(
+                save_result = await self._save_content(
                     str(paste_id), edit_paste.content
                 )
-                if not new_content_path:
+                if not save_result:
                     return None
+                (
+                    new_content_path,
+                    content_size,
+                    is_compressed,
+                    original_size,
+                ) = save_result
                 result.content_path = new_content_path
-                result.content_size = len(edit_paste.content)
+                result.content_size = content_size
+                result.is_compressed = is_compressed
+                result.original_size = original_size
 
             result.last_updated_at = datetime.now(tz=timezone.utc)
 
@@ -217,7 +309,8 @@ class PasteService:
                 edit_paste.content
                 if edit_paste.content is not None
                 else await self._read_content(
-                    path.join(self.paste_base_folder_path, result.content_path)
+                    path.join(self.paste_base_folder_path, result.content_path),
+                    is_compressed=result.is_compressed,
                 )
             )
 
@@ -285,16 +378,19 @@ class PasteService:
             )
 
         paste_id = uuid.uuid4()
-        paste_path = await self._save_content(
+        save_result = await self._save_content(
             str(paste_id),
             paste.content,
         )
-        if not paste_path:
+        if not save_result:
             raise HTTPException(
                 status_code=500,
                 detail="Failed to save paste content",
                 headers={"Retry-After": "60"},
             )
+
+        paste_path, content_size, is_compressed, original_size = save_result
+
         try:
             # Generate plaintext tokens to return to user
             edit_token_plaintext = uuid.uuid4().hex
@@ -313,7 +409,9 @@ class PasteService:
                     expires_at=paste.expires_at,
                     creator_ip=str(user_data.ip),
                     creator_user_agent=user_data.user_agent,
-                    content_size=len(paste.content),
+                    content_size=content_size,
+                    is_compressed=is_compressed,
+                    original_size=original_size,
                     edit_token=edit_token_hashed,
                     delete_token=delete_token_hashed,
                 )
