@@ -523,3 +523,54 @@ class TestPasteDeleteAPI:
 
         # Should fail with 401 Unauthorized (missing auth header)
         assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_api_compression_is_transparent(
+        test_client: AsyncClient, bypass_headers
+):
+    """Test that compression is completely transparent to API consumers.
+
+    Verifies that the create -> get -> edit cycle works seamlessly with
+    compressed content, with no client-side changes required.
+    """
+    # Create a large paste (will be compressed)
+    create_data = {
+        "title": "Compressed Paste",
+        "content": "Test content for compression. " * 100,  # Exceeds 512-byte threshold
+        "content_language": "plain_text",
+    }
+
+    create_response = await test_client.post("/pastes", json=create_data, headers=bypass_headers)
+
+    assert create_response.status_code == 200
+    create_data_response = create_response.json()
+    paste_id = create_data_response["id"]
+    edit_token = create_data_response["edit_token"]
+
+    # Retrieve the paste
+    get_response = await test_client.get(f"/pastes/{paste_id}", headers=bypass_headers)
+
+    assert get_response.status_code == 200
+    get_data = get_response.json()
+
+    # Verify content matches exactly (no corruption from compression)
+    assert get_data["content"] == create_data["content"]
+    assert get_data["title"] == "Compressed Paste"
+
+    # Edit the paste with new large content
+    edit_data = {
+        "content": "Updated content. " * 100,
+    }
+
+    edit_response = await test_client.put(
+        f"/pastes/{paste_id}",
+        json=edit_data,
+        headers={"Authorization": edit_token}
+    )
+
+    assert edit_response.status_code == 200
+    edit_data_response = edit_response.json()
+
+    # Verify edit succeeded and content matches new content
+    assert edit_data_response["content"] == edit_data["content"]
