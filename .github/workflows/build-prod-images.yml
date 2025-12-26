@@ -14,103 +14,60 @@ on:
         type: boolean
 
 jobs:
-  build-and-push-backend:
+  setup:
     runs-on: ubuntu-latest
-    environment: production
-    permissions:
-      packages: write
-      contents: read
-      attestations: write
-      id-token: write
+    outputs:
+      repo_lc: ${{ steps.normalize.outputs.repo_lc }}
+      version: ${{ steps.normalize.outputs.version }}
+      backend_tags: ${{ steps.tags.outputs.backend }}
+      frontend_tags: ${{ steps.tags.outputs.frontend }}
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v5
-      - name: Normalize version
-        id: normalize_version
+      - name: Normalize inputs
+        id: normalize
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          echo "normalized_version=$(echo '${{ github.event.inputs.version }}' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9.]/-/g')" >> $GITHUB_OUTPUT
-          REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          echo "REPO_LC=$REPO_LC" >> $GITHUB_OUTPUT
-      - name: Login to Github Container Registry
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          VERSION=$(echo "$VERSION_INPUT" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9.]/-/g')
+          REPO_LC=$(echo "$REPOSITORY" | tr '[:upper:]' '[:lower:]')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "repo_lc=$REPO_LC" >> $GITHUB_OUTPUT
 
-      - name: Extract metadata for backend image
-        id: meta_backend
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
-        with:
-          images: |
-            ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-backend
-      - name: Set latest tag
-        id: latest_tag
+      - name: Build tag strings
+        id: tags
+        env:
+          REPO_LC: ${{ steps.normalize.outputs.repo_lc }}
+          VERSION: ${{ steps.normalize.outputs.version }}
+          SET_LATEST: ${{ inputs.set_latest_tag }}
         run: |
-          if [[ "${{ github.event.inputs.set_latest_tag }}" == true ]]; then
-            echo "latest_tag=ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-backend:latest" >> $GITHUB_OUTPUT
-          else
-            echo "latest_tag=" >> $GITHUB_OUTPUT
+          BACKEND_TAGS="ghcr.io/${REPO_LC}-backend:${VERSION}"
+          FRONTEND_TAGS="ghcr.io/${REPO_LC}-frontend:${VERSION}"
+          if [[ "$SET_LATEST" == "true" ]]; then
+            BACKEND_TAGS="${BACKEND_TAGS}
+          ghcr.io/${REPO_LC}-backend:latest"
+            FRONTEND_TAGS="${FRONTEND_TAGS}
+          ghcr.io/${REPO_LC}-frontend:latest"
           fi
-      - name: Build and push Backend
-        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
-        with:
-          context: backend
-          push: true
-          tags: |
-            ${{ steps.meta_backend.outputs.tags }}
-            ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-backend:${{ steps.normalize_version.outputs.normalized_version }}
-            ${{ steps.latest_tag.outputs.latest_tag }}
-          labels: ${{ steps.meta_backend.outputs.labels }}
+          echo "backend<<EOF" >> $GITHUB_OUTPUT
+          echo "$BACKEND_TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "frontend<<EOF" >> $GITHUB_OUTPUT
+          echo "$FRONTEND_TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-  build-and-push-frontend:
-    runs-on: ubuntu-latest
-    environment: production
-    permissions:
-      packages: write
-      contents: read
-      attestations: write
-      id-token: write
+  build-backend:
+    needs: setup
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      image_name: backend
+      context: backend
+      additional_tags: ${{ needs.setup.outputs.backend_tags }}
 
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v5
-
-      - name: Normalize version
-        id: normalize_version
-        run: |
-          echo "normalized_version=$(echo '${{ github.event.inputs.version }}' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9.]/-/g')" >> $GITHUB_OUTPUT
-          REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          echo "REPO_LC=$REPO_LC" >> $GITHUB_OUTPUT
-      - name: Login to Github Container Registry
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata for frontend image
-        id: meta_frontend
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
-        with:
-          images: |
-            ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-frontend
-      - name: Set latest tag
-        id: latest_tag
-        run: |
-          if [[ "${{ github.event.inputs.set_latest_tag }}" == true ]]; then
-            echo "latest_tag=ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-frontend:latest" >> $GITHUB_OUTPUT
-          else
-            echo "latest_tag=" >> $GITHUB_OUTPUT
-          fi
-      - name: Build and push Frontend
-        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
-        with:
-          context: frontend
-          push: true
-          tags: |
-            ${{ steps.meta_frontend.outputs.tags }}
-            ghcr.io/${{ steps.normalize_version.outputs.repo_lc  }}-frontend:${{ steps.normalize_version.outputs.normalized_version }}
-            ${{ steps.latest_tag.outputs.latest_tag }}
-          labels: ${{ steps.meta_frontend.outputs.labels }}
+  build-frontend:
+    needs: setup
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      image_name: frontend
+      context: frontend
+      additional_tags: ${{ needs.setup.outputs.frontend_tags }}
