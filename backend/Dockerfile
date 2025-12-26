@@ -1,4 +1,14 @@
 # ============================================
+# Build Arguments
+# ============================================
+ARG UV_VERSION=0.9.18
+
+# ============================================
+# Stage 0: UV Binary
+# ============================================
+FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
+
+# ============================================
 # Stage 1: Base - Common Configuration
 # ============================================
 FROM python:3.13.1-slim AS base
@@ -29,27 +39,27 @@ RUN apt-get update && \
         libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy uv from official image (pinned version for reproducibility)
-COPY --from=ghcr.io/astral-sh/uv:0.5.16 /uv /uvx /usr/local/bin/
+# Copy uv from uv stage (pinned version for reproducibility)
+COPY --from=uv /uv /uvx /usr/local/bin/
 
 # Copy dependency files first for optimal layer caching
 # Changes to source code won't invalidate this layer
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies
+# Install dependencies with BuildKit cache mount for faster rebuilds
 # --frozen: Use exact versions from uv.lock (reproducible builds)
 # --no-dev: Exclude development dependencies
 # --extra production: Include any production related dependencies (redis, aiocache etc...)
-# --no-cache: Prevent uv cache bloat in image
-RUN uv sync --frozen --no-default-groups --extra production --no-cache
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-default-groups --extra production
 
 # ============================================
 # Stage 3: Runtime - Production Image
 # ============================================
 FROM base AS runtime
 
-# Copy uv for runtime execution
-COPY --from=ghcr.io/astral-sh/uv:0.9.18 /uv /uvx /usr/local/bin/
+# Copy uv from builder stage (ensures version consistency)
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uvx /usr/local/bin/
 
 # Copy installed dependencies from builder stage
 # This excludes build tools (gcc, g++, libpq-dev)
@@ -61,10 +71,8 @@ COPY --chown=appuser:appuser . .
 # Copy Docker-specific alembic config
 COPY --chown=appuser:appuser alembic.docker.ini alembic.ini
 
-# Create files directory and set ownership for entire /app directory
-# This ensures appuser can write to .venv and create build artifacts
-RUN mkdir -p /app/files && \
-    chown -R appuser:appuser /app
+# Create files directory with proper ownership
+RUN mkdir -p /app/files && chown appuser:appuser /app/files
 
 # Switch to non-root user for security
 USER appuser
