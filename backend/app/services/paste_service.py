@@ -28,6 +28,13 @@ from app.config import config
 from app.db.models import PasteEntity
 from app.services.cleanup_service import CleanupService
 from app.storage import StorageClient
+from app.utils.active_pastes_counter import get_active_pastes_counter
+from app.utils.metrics import (
+    compressed_pastes,
+    paste_operations,
+    paste_size,
+    storage_operations,
+)
 from app.utils.token_utils import hash_token, is_token_hashed, verify_token
 
 
@@ -44,6 +51,18 @@ class PasteService:
         self._cleanup_task: asyncio.Task[Coroutine[None, None, None]] | None = None
         self._lock_file: Path = Path(".cleanup.lock")
         self._cleanup_service: CleanupService = cleanup_service
+        self._storage_backend_name: str = self._get_storage_backend_name()
+
+    def _get_storage_backend_name(self) -> str:
+        """Get storage backend name for metrics labels."""
+        class_name = self.storage_client.__class__.__name__
+        if "Local" in class_name:
+            return "local"
+        elif "S3" in class_name:
+            return "s3"
+        elif "Minio" in class_name or "MinIO" in class_name:
+            return "minio"
+        return "unknown"
 
     async def _read_content(self, paste_path: str, is_compressed: bool = False) -> str | None:
         """
@@ -60,7 +79,14 @@ class PasteService:
             data = await self.storage_client.get_object(paste_path)
             if data is None:
                 self.logger.error("Paste content not found: %s", paste_path)
+                storage_operations.labels(
+                    operation="get", backend=self._storage_backend_name, status="not_found"
+                ).inc()
                 return None
+
+            storage_operations.labels(
+                operation="get", backend=self._storage_backend_name, status="success"
+            ).inc()
 
             if is_compressed:
                 from app.utils.compression import CompressionError, decompress_content
@@ -74,6 +100,9 @@ class PasteService:
                 return data.decode("utf-8")
         except Exception as exc:
             self.logger.error("Failed to read paste content: %s", exc)
+            storage_operations.labels(
+                operation="get", backend=self._storage_backend_name, status="error"
+            ).inc()
             return None
 
     async def _save_content(self, paste_id: str, content: str) -> tuple[str, int, bool, int | None] | None:
@@ -126,23 +155,38 @@ class PasteService:
             # Write content (compressed or uncompressed)
             if use_compression and compressed_data:
                 await self.storage_client.put_object(storage_key, compressed_data)
+                storage_operations.labels(
+                    operation="put", backend=self._storage_backend_name, status="success"
+                ).inc()
                 content_size = len(compressed_data)
                 return storage_key, content_size, True, original_size
             else:
                 await self.storage_client.put_object(storage_key, content.encode("utf-8"))
+                storage_operations.labels(
+                    operation="put", backend=self._storage_backend_name, status="success"
+                ).inc()
                 content_size = original_size
                 return storage_key, content_size, False, None
 
         except Exception as exc:
             self.logger.error("Failed to save paste content: %s", exc)
+            storage_operations.labels(
+                operation="put", backend=self._storage_backend_name, status="error"
+            ).inc()
             return None
 
     async def _remove_file(self, storage_key: str):
         """Remove paste file from storage."""
         try:
             await self.storage_client.delete_object(storage_key)
+            storage_operations.labels(
+                operation="delete", backend=self._storage_backend_name, status="success"
+            ).inc()
         except Exception as exc:
             self.logger.error("Failed to remove file %s: %s", storage_key, exc)
+            storage_operations.labels(
+                operation="delete", backend=self._storage_backend_name, status="error"
+            ).inc()
 
     def verify_storage_limit(self):
         """Verify storage limit (only applicable for local storage)."""
@@ -202,11 +246,13 @@ class PasteService:
             )
             result: PasteEntity | None = (await session.execute(stmt)).scalar_one_or_none()
             if result is None:
+                paste_operations.labels(operation="get", status="not_found").inc()
                 return None
             content = await self._read_content(
                 result.content_path,
                 is_compressed=result.is_compressed,
             )
+            paste_operations.labels(operation="get", status="success").inc()
             return PasteResponse(
                 id=result.id,
                 title=result.title,
@@ -233,6 +279,7 @@ class PasteService:
             result: PasteEntity | None = (await session.execute(stmt)).scalar_one_or_none()
 
             if result is None:
+                paste_operations.labels(operation="edit", status="not_found").inc()
                 return None
 
             # Verify token - support both hashed (new) and plaintext (legacy)
@@ -249,6 +296,7 @@ class PasteService:
                     self.logger.info("Upgraded edit token to hashed format for paste %s", paste_id)
 
             if not token_valid:
+                paste_operations.labels(operation="edit", status="unauthorized").inc()
                 return None
 
             # Update only the fields that are provided (not None)
@@ -290,6 +338,7 @@ class PasteService:
                 )
             )
 
+            paste_operations.labels(operation="edit", status="success").inc()
             return PasteResponse(
                 id=result.id,
                 title=result.title,
@@ -316,6 +365,7 @@ class PasteService:
             result: PasteEntity | None = (await session.execute(stmt)).scalar_one_or_none()
 
             if result is None:
+                paste_operations.labels(operation="delete", status="not_found").inc()
                 return False
 
             # Verify token - support both hashed (new) and plaintext (legacy)
@@ -329,6 +379,7 @@ class PasteService:
                 # No need to upgrade here since we're deleting anyway
 
             if not token_valid:
+                paste_operations.labels(operation="delete", status="unauthorized").inc()
                 return False
 
             # Remove file
@@ -340,10 +391,15 @@ class PasteService:
             # Delete from database
             await session.delete(result)
             await session.commit()
+            paste_operations.labels(operation="delete", status="success").inc()
+            counter = get_active_pastes_counter()
+            if counter:
+                counter.dec()
             return True
 
     async def create_paste(self, paste: CreatePaste, user_data: UserMetaData) -> PasteResponse:
         if not self.verify_storage_limit():
+            paste_operations.labels(operation="create", status="storage_limit").inc()
             raise HTTPException(
                 status_code=500,
                 detail="Storage limit reached, contact administration",
@@ -355,6 +411,7 @@ class PasteService:
             paste.content,
         )
         if not save_result:
+            paste_operations.labels(operation="create", status="error").inc()
             raise HTTPException(
                 status_code=500,
                 detail="Failed to save paste content",
@@ -391,6 +448,15 @@ class PasteService:
                 await session.commit()
                 await session.refresh(entity)
 
+                # Record metrics on successful create
+                paste_operations.labels(operation="create", status="success").inc()
+                paste_size.observe(original_size if original_size else content_size)
+                counter = get_active_pastes_counter()
+                if counter:
+                    counter.inc()
+                if is_compressed:
+                    compressed_pastes.inc()
+
                 return CreatePasteResponse(
                     id=entity.id,
                     title=entity.title,
@@ -405,6 +471,7 @@ class PasteService:
         except Exception as exc:
             self.logger.error("Failed to create paste: %s", exc)
             await self._remove_file(paste_path)
+            paste_operations.labels(operation="create", status="error").inc()
             raise HTTPException(
                 status_code=500,
                 detail="Failed to create paste",

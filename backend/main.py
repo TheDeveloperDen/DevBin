@@ -30,7 +30,12 @@ from app.exceptions import (
 )
 from app.ratelimit import NoOpLimiter, init_rate_limiter, limiter
 from app.services.cleanup_service import CleanupService
+from app.utils.active_pastes_counter import (
+    ActivePastesCounter,
+    set_active_pastes_counter,
+)
 from app.utils.logging import configure_logging
+from app.utils.metrics import init_metrics_redis
 
 # Configure logging at module level
 configure_logging(level=config.LOG_LEVEL, log_format=config.LOG_FORMAT)
@@ -42,6 +47,56 @@ def _build_container() -> Container:
     return container
 
 
+def _create_redis_client():
+    """Create a Redis client if Redis is configured."""
+    logger = logging.getLogger(__name__)
+
+    if config.CACHE_TYPE != "redis" and config.LOCK_TYPE != "redis":
+        return None
+
+    try:
+        import redis
+
+        client = redis.Redis(
+            host=config.REDIS_HOST,
+            port=config.REDIS_PORT,
+            db=config.REDIS_DB,
+            password=config.REDIS_PASSWORD,
+            decode_responses=True,
+        )
+        # Test connection
+        client.ping()
+        logger.info("Redis connection established for metrics")
+        return client
+    except ImportError:
+        logger.warning("Redis package not installed, metrics will use local backend")
+        return None
+    except Exception as exc:
+        logger.warning("Redis not available for metrics: %s", exc)
+        return None
+
+
+async def _init_active_pastes_counter(container: Container) -> ActivePastesCounter:
+    """Initialize the ActivePastesCounter."""
+    from asyncio import Future
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.orm import sessionmaker
+
+    # Get the initialized engine from the container resource
+    engine = container.engine()
+    if isinstance(engine, Future):
+        engine = engine.result()
+    session_factory = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+
+    # Create and initialize the counter
+    counter = ActivePastesCounter(session_factory)
+    await counter.initialize()
+    set_active_pastes_counter(counter)
+
+    return counter
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     container = _build_container()
@@ -51,10 +106,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await container.init_resources()
     container.wire()
 
+    # Initialize Redis client for metrics (if available)
+    redis_client = _create_redis_client()
+    init_metrics_redis(redis_client)
+
     # Set cache for pastes route
     from app.api.subroutes.pastes import set_cache
     cache_instance = container.cache_client()
     set_cache(cache_instance)
+
+    # Initialize active pastes counter with periodic DB refresh
+    active_pastes_counter = await _init_active_pastes_counter(container)
+    active_pastes_counter.start_refresh_task()
 
     cleanup_service: CleanupService = (
         await container.cleanup_service()
@@ -64,6 +127,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         yield
     finally:
         await cleanup_service.stop_cleanup_worker()
+        await active_pastes_counter.stop_refresh_task()
         await container.shutdown_resources()
 
 

@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import logging
+import time
 from collections.abc import Coroutine
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -12,6 +13,8 @@ from sqlalchemy.orm import sessionmaker
 from app.config import config
 from app.db.models import PasteEntity
 from app.locks import DistributedLock
+from app.utils.active_pastes_counter import get_active_pastes_counter
+from app.utils.metrics import cleanup_duration
 
 
 class CleanupService:
@@ -76,6 +79,7 @@ class CleanupService:
         """Remove expired pastes and their files"""
         from app.api.subroutes.pastes import cache
 
+        start_time = time.monotonic()
         try:
             BATCH_SIZE = 100
             total_cleaned = 0
@@ -123,12 +127,19 @@ class CleanupService:
                     total_cleaned += len(batch)
 
                 if total_cleaned > 0:
+                    # Update active_pastes counter
+                    counter = get_active_pastes_counter()
+                    if counter:
+                        counter.dec(total_cleaned)
                     if not error:
                         self.logger.info("Successfully cleaned up %d expired pastes", total_cleaned)
                     else:
                         self.logger.info("Cleaned up %d expired pastes with some errors", total_cleaned)
         except Exception as exc:
             self.logger.error("Failed to cleanup expired pastes: %s", exc)
+        finally:
+            duration = time.monotonic() - start_time
+            cleanup_duration.observe(duration)
 
     async def _cleanup_deleted_pastes(self):
         """Remove deleted pastes that have been marked for deletion beyond the configured time"""
@@ -139,6 +150,7 @@ class CleanupService:
         self.logger.info("Cleaning up deleted pastes")
         from app.api.subroutes.pastes import cache
 
+        start_time = time.monotonic()
         try:
             BATCH_SIZE = 100
             total_cleaned = 0
@@ -195,3 +207,6 @@ class CleanupService:
                         self.logger.info("Cleaned up %d deleted pastes with some errors", total_cleaned)
         except Exception as exc:
             self.logger.error("Failed to cleanup deleted pastes: %s", exc)
+        finally:
+            duration = time.monotonic() - start_time
+            cleanup_duration.observe(duration)

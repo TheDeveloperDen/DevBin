@@ -22,6 +22,7 @@ from app.containers import Container
 from app.ratelimit import create_limit_resolver, get_exempt_key, limiter
 from app.services.paste_service import PasteService
 from app.utils.LRUMemoryCache import LRUMemoryCache
+from app.utils.metrics import cache_operations
 
 if TYPE_CHECKING:
     from aiocache import RedisCache
@@ -58,6 +59,7 @@ async def get_paste(
 ):
     cached_result = await cache.get(paste_id)
     if cached_result:
+        cache_operations.labels(operation="get", result="hit").inc()
         return Response(
             cached_result,
             headers={
@@ -66,6 +68,7 @@ async def get_paste(
             },
         )
 
+    cache_operations.labels(operation="get", result="miss").inc()
     paste_result = await paste_service.get_legacy_paste_by_name(paste_id)
     if not paste_result:
         return Response(
@@ -82,6 +85,7 @@ async def get_paste(
     paste_result = paste_result.model_dump_json()
 
     await cache.set(paste_id, paste_result, ttl=config.CACHE_TTL)
+    cache_operations.labels(operation="set", result="success").inc()
 
     return Response(
         paste_result,
@@ -105,6 +109,7 @@ async def get_paste(
 ):
     cached_result = await cache.get(paste_id)
     if cached_result:
+        cache_operations.labels(operation="get", result="hit").inc()
         return Response(
             cached_result,
             headers={
@@ -113,6 +118,7 @@ async def get_paste(
             },
         )
 
+    cache_operations.labels(operation="get", result="miss").inc()
     paste_result = await paste_service.get_paste_by_id(paste_id)
     if not paste_result:
         return Response(
@@ -128,6 +134,7 @@ async def get_paste(
     paste_result = paste_result.model_dump_json()
 
     await cache.set(paste_id, paste_result, ttl=config.CACHE_TTL)
+    cache_operations.labels(operation="set", result="success").inc()
 
     return Response(
         paste_result,
@@ -170,6 +177,7 @@ async def edit_paste(
         )
     # Invalidate cache after successful edit
     await cache.delete(paste_id)
+    cache_operations.labels(operation="delete", result="success").inc()
     return result
 
 
@@ -193,4 +201,5 @@ async def delete_paste(
         )
     # Invalidate cache after successful delete
     await cache.delete(paste_id)
+    cache_operations.labels(operation="delete", result="success").inc()
     return {"message": "Paste deleted successfully"}
