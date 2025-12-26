@@ -1,4 +1,5 @@
 """Test helper functions and assertion utilities."""
+
 from pathlib import Path
 from typing import Any
 
@@ -80,10 +81,7 @@ def assert_paste_file_not_exists(storage_path: Path, paste_id: str):
 
 
 def assert_error_response(
-    response: Response,
-    status_code: int,
-    error_type: str | None = None,
-    error_message_contains: str | None = None
+    response: Response, status_code: int, error_type: str | None = None, error_message_contains: str | None = None
 ):
     """
     Standardized error response validation.
@@ -97,27 +95,27 @@ def assert_error_response(
     Raises:
         AssertionError: If response doesn't match expectations
     """
-    assert response.status_code == status_code, \
-        f"Expected status code {status_code}, got {response.status_code}"
+    assert response.status_code == status_code, f"Expected status code {status_code}, got {response.status_code}"
 
     data = response.json()
 
     # Check for error field (can be at root or in detail)
     if error_type:
         if "error" in data:
-            assert data["error"] == error_type, \
-                f"Expected error type '{error_type}', got '{data['error']}'"
+            assert data["error"] == error_type, f"Expected error type '{error_type}', got '{data['error']}'"
         elif "detail" in data and isinstance(data["detail"], dict) and "error" in data["detail"]:
-            assert data["detail"]["error"] == error_type, \
+            assert data["detail"]["error"] == error_type, (
                 f"Expected error type '{error_type}', got '{data['detail']['error']}'"
+            )
         else:
             raise AssertionError(f"Error type '{error_type}' not found in response: {data}")
 
     # Check error message contains expected substring
     if error_message_contains:
         response_str = str(data).lower()
-        assert error_message_contains.lower() in response_str, \
+        assert error_message_contains.lower() in response_str, (
             f"Expected error message to contain '{error_message_contains}', got: {data}"
+        )
 
 
 def assert_successful_paste_response(response: Response) -> dict[str, Any]:
@@ -133,8 +131,7 @@ def assert_successful_paste_response(response: Response) -> dict[str, Any]:
     Raises:
         AssertionError: If response doesn't match expectations
     """
-    assert response.status_code == 200, \
-        f"Expected status code 200, got {response.status_code}"
+    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
 
     data = response.json()
 
@@ -162,24 +159,17 @@ def assert_tokens_valid(paste_data: dict[str, Any]):
     assert "delete_token" in paste_data, "Response should contain 'delete_token'"
 
     # Tokens should be plaintext (not hashed) when returned to user
-    assert not paste_data["edit_token"].startswith("$argon2"), \
-        "Edit token should be plaintext, not hashed"
-    assert not paste_data["delete_token"].startswith("$argon2"), \
-        "Delete token should be plaintext, not hashed"
+    assert not paste_data["edit_token"].startswith("$argon2"), "Edit token should be plaintext, not hashed"
+    assert not paste_data["delete_token"].startswith("$argon2"), "Delete token should be plaintext, not hashed"
 
     # Tokens should be proper length
-    assert len(paste_data["edit_token"]) == TEST_TOKEN_LENGTH, \
-        f"Edit token should be {TEST_TOKEN_LENGTH} characters"
-    assert len(paste_data["delete_token"]) == TEST_TOKEN_LENGTH, \
+    assert len(paste_data["edit_token"]) == TEST_TOKEN_LENGTH, f"Edit token should be {TEST_TOKEN_LENGTH} characters"
+    assert len(paste_data["delete_token"]) == TEST_TOKEN_LENGTH, (
         f"Delete token should be {TEST_TOKEN_LENGTH} characters"
+    )
 
 
-async def assert_paste_content_matches(
-    session: AsyncSession,
-    storage_path: Path,
-    paste_id: str,
-    expected_content: str
-):
+async def assert_paste_content_matches(session: AsyncSession, storage_path: Path, paste_id: str, expected_content: str):
     """
     Verify paste content matches both in database and file system.
 
@@ -200,5 +190,6 @@ async def assert_paste_content_matches(
     assert paste_file.exists(), f"Paste file {paste_file} should exist"
 
     actual_content = paste_file.read_text()
-    assert actual_content == expected_content, \
+    assert actual_content == expected_content, (
         f"Content mismatch. Expected: {expected_content[:100]}, Got: {actual_content[:100]}"
+    )

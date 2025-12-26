@@ -1,4 +1,5 @@
 """Pytest configuration plugin that sets environment variables early."""
+
 import json
 import os
 

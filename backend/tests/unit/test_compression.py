@@ -1,4 +1,5 @@
 """Unit tests for compression utilities."""
+
 import pytest
 
 from app.utils.compression import CompressionError, compress_content, decompress_content, should_compress
@@ -12,8 +13,8 @@ class TestCompressionUtils:
         original = "This is test content that should compress well. " * 20
         compressed, original_size = compress_content(original)
 
-        assert len(compressed) < len(original.encode('utf-8'))
-        assert original_size == len(original.encode('utf-8'))
+        assert len(compressed) < len(original.encode("utf-8"))
+        assert original_size == len(original.encode("utf-8"))
 
         decompressed = decompress_content(compressed)
         assert decompressed == original

@@ -268,7 +268,9 @@ class TestPasteGetAPI:
 class TestPasteRawAPI:
     """API tests for raw paste content endpoint."""
 
-    async def test_get_raw_paste_returns_plain_text(self, test_client: AsyncClient, authenticated_paste, bypass_headers):
+    async def test_get_raw_paste_returns_plain_text(
+        self, test_client: AsyncClient, authenticated_paste, bypass_headers
+    ):
         """GET /pastes/{id}/raw should return raw paste content as plain text."""
         paste_id = authenticated_paste["id"]
 
@@ -286,7 +288,9 @@ class TestPasteRawAPI:
 
         assert response.status_code == 404
 
-    async def test_get_raw_paste_includes_cache_headers(self, test_client: AsyncClient, authenticated_paste, bypass_headers):
+    async def test_get_raw_paste_includes_cache_headers(
+        self, test_client: AsyncClient, authenticated_paste, bypass_headers
+    ):
         """GET /pastes/{id}/raw should include cache control headers."""
         paste_id = authenticated_paste["id"]
 

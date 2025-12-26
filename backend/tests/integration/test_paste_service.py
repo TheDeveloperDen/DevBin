@@ -308,7 +308,7 @@ class TestPasteServiceCreate:
             mock_maker.return_value.__aenter__ = lambda self: mock_session_context().__aenter__()
             mock_maker.return_value.__aexit__ = lambda self, *args: mock_session_context().__aexit__(*args)
 
-            with pytest.raises(Exception):
+            with pytest.raises(Exception):  # noqa: B017 - Testing that DB failure raises exception
                 await paste_service.create_paste(paste_dto, sample_user_metadata)
 
         # Verify file was cleaned up
@@ -656,7 +656,7 @@ class TestPasteServiceLegacy:
         hastebin_dir.mkdir(parents=True, exist_ok=True)
 
         paste_name = "testpaste"
-        paste_md5 = hashlib.md5(paste_name.encode()).hexdigest()
+        paste_md5 = hashlib.md5(paste_name.encode()).hexdigest()  # noqa: S324 - MD5 for legacy format
         legacy_file = hastebin_dir / paste_md5
         legacy_file.write_text("Legacy hastebin content")
 

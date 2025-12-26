@@ -1,4 +1,5 @@
 """Unit tests for token utility functions."""
+
 import pytest
 
 from app.utils.token_utils import hash_token, is_token_hashed, verify_token

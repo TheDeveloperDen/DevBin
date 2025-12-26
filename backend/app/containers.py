@@ -19,9 +19,7 @@ from app.utils.LRUMemoryCache import LRUMemoryCache
 
 
 @asynccontextmanager
-async def _engine_resource(
-        db_url: str, echo: bool = False
-) -> AsyncIterator[AsyncEngine]:
+async def _engine_resource(db_url: str, echo: bool = False) -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(db_url, echo=echo, future=True)
     try:
         yield engine
@@ -215,6 +213,4 @@ class Container(containers.DeclarativeContainer):
         distributed_lock,
     )
 
-    paste_service = providers.Factory(
-        PasteService, session_factory, cleanup_service, storage_client
-    )
+    paste_service = providers.Factory(PasteService, session_factory, cleanup_service, storage_client)

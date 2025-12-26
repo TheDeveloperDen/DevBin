@@ -1,4 +1,5 @@
 """Tests for metrics and health endpoints."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -7,9 +8,7 @@ from httpx import AsyncClient
 class TestMetricsEndpoint:
     """Test Prometheus metrics endpoint without authentication."""
 
-    async def test_metrics_endpoint_accessible_without_auth_when_not_configured(
-        self, test_client: AsyncClient
-    ):
+    async def test_metrics_endpoint_accessible_without_auth_when_not_configured(self, test_client: AsyncClient):
         """GET /metrics should be publicly accessible when METRICS_TOKEN is not set."""
         response = await test_client.get("/metrics")
 
@@ -33,9 +32,7 @@ class TestMetricsEndpoint:
 class TestMetricsAuthentication:
     """Test metrics endpoint authentication when token is configured."""
 
-    async def test_metrics_requires_auth_when_token_configured(
-        self, test_client_with_metrics_auth: AsyncClient
-    ):
+    async def test_metrics_requires_auth_when_token_configured(self, test_client_with_metrics_auth: AsyncClient):
         """GET /metrics should require authentication when METRICS_TOKEN is set."""
         response = await test_client_with_metrics_auth.get("/metrics")
 
@@ -47,13 +44,10 @@ class TestMetricsAuthentication:
         assert "error" in error
         assert "required" in error["error"].lower()
 
-    async def test_metrics_rejects_invalid_bearer_token(
-        self, test_client_with_metrics_auth: AsyncClient
-    ):
+    async def test_metrics_rejects_invalid_bearer_token(self, test_client_with_metrics_auth: AsyncClient):
         """GET /metrics should reject invalid Bearer tokens."""
         response = await test_client_with_metrics_auth.get(
-            "/metrics",
-            headers={"Authorization": "Bearer wrong_token_12345"}
+            "/metrics", headers={"Authorization": "Bearer wrong_token_12345"}
         )
 
         assert response.status_code == 401
@@ -63,9 +57,7 @@ class TestMetricsAuthentication:
         assert "error" in error
         assert "invalid" in error["error"].lower()
 
-    async def test_metrics_rejects_malformed_auth_header(
-        self, test_client_with_metrics_auth: AsyncClient
-    ):
+    async def test_metrics_rejects_malformed_auth_header(self, test_client_with_metrics_auth: AsyncClient):
         """GET /metrics should reject malformed Authorization headers."""
         malformed_headers = [
             "test_metrics_token",  # Missing "Bearer" prefix
@@ -75,20 +67,14 @@ class TestMetricsAuthentication:
         ]
 
         for auth_header in malformed_headers:
-            response = await test_client_with_metrics_auth.get(
-                "/metrics",
-                headers={"Authorization": auth_header}
-            )
+            response = await test_client_with_metrics_auth.get("/metrics", headers={"Authorization": auth_header})
 
             assert response.status_code == 401, f"Failed for: {auth_header}"
 
-    async def test_metrics_accepts_valid_bearer_token(
-        self, test_client_with_metrics_auth: AsyncClient
-    ):
+    async def test_metrics_accepts_valid_bearer_token(self, test_client_with_metrics_auth: AsyncClient):
         """GET /metrics should accept valid Bearer token."""
         response = await test_client_with_metrics_auth.get(
-            "/metrics",
-            headers={"Authorization": "Bearer test_metrics_token_12345"}
+            "/metrics", headers={"Authorization": "Bearer test_metrics_token_12345"}
         )
 
         assert response.status_code == 200
@@ -98,20 +84,16 @@ class TestMetricsAuthentication:
         content = response.text
         assert len(content) > 0
 
-    async def test_metrics_token_is_case_sensitive(
-        self, test_client_with_metrics_auth: AsyncClient
-    ):
+    async def test_metrics_token_is_case_sensitive(self, test_client_with_metrics_auth: AsyncClient):
         """Metrics token validation should be case-sensitive."""
         response = await test_client_with_metrics_auth.get(
             "/metrics",
-            headers={"Authorization": "Bearer TEST_METRICS_TOKEN_12345"}  # Wrong case
+            headers={"Authorization": "Bearer TEST_METRICS_TOKEN_12345"},  # Wrong case
         )
 
         assert response.status_code == 401
 
-    async def test_metrics_prevents_timing_attacks(
-        self, test_client_with_metrics_auth: AsyncClient
-    ):
+    async def test_metrics_prevents_timing_attacks(self, test_client_with_metrics_auth: AsyncClient):
         """Multiple failed auth attempts should return consistent responses."""
         tokens = [
             "wrong_token_1",
@@ -122,10 +104,7 @@ class TestMetricsAuthentication:
 
         responses = []
         for token in tokens:
-            response = await test_client_with_metrics_auth.get(
-                "/metrics",
-                headers={"Authorization": f"Bearer {token}"}
-            )
+            response = await test_client_with_metrics_auth.get("/metrics", headers={"Authorization": f"Bearer {token}"})
             responses.append(response.status_code)
 
         # All should return 401

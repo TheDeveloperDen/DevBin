@@ -15,9 +15,7 @@ RATE_LIMIT_PATTERN = re.compile(r"^\d+/(second|minute|hour|day)$")
 def validate_rate_limit(value: str) -> str:
     """Validate rate limit format (e.g., '10/minute', '100/hour')."""
     if not RATE_LIMIT_PATTERN.match(value):
-        raise ValueError(
-            f"Invalid rate limit format: '{value}'. " "Expected format: '<number>/<second|minute|hour|day>'"
-        )
+        raise ValueError(f"Invalid rate limit format: '{value}'. Expected format: '<number>/<second|minute|hour|day>'")
     return value
 
 
@@ -34,7 +32,7 @@ class Config(BaseSettings):
     )
 
     PORT: int = Field(default=8000, validation_alias="APP_PORT")
-    HOST: str = Field(default="0.0.0.0", validation_alias="APP_HOST")
+    HOST: str = Field(default="0.0.0.0", validation_alias="APP_HOST")  # noqa: S104 - Bind to all interfaces for container deployment
 
     # DB
     DATABASE_URL: str = Field(

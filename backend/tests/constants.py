@@ -12,7 +12,7 @@ TEST_DB_URL = "postgresql+asyncpg://postgres:postgres@localhost:5433/devbin_test
 TEST_DB_PORT = 5433
 
 # File Storage
-TEST_FILE_STORAGE_PATH = "/tmp/devbin_test_files"
+TEST_FILE_STORAGE_PATH = "/tmp/devbin_test_files"  # noqa: S108 - Test-only temp path
 
 # CORS Configuration
 TEST_CORS_DOMAINS = ["http://test"]

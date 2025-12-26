@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import logging
 import shutil
@@ -79,14 +80,10 @@ class PasteService:
             data = await self.storage_client.get_object(paste_path)
             if data is None:
                 self.logger.error("Paste content not found: %s", paste_path)
-                storage_operations.labels(
-                    operation="get", backend=self._storage_backend_name, status="not_found"
-                ).inc()
+                storage_operations.labels(operation="get", backend=self._storage_backend_name, status="not_found").inc()
                 return None
 
-            storage_operations.labels(
-                operation="get", backend=self._storage_backend_name, status="success"
-            ).inc()
+            storage_operations.labels(operation="get", backend=self._storage_backend_name, status="success").inc()
 
             if is_compressed:
                 from app.utils.compression import CompressionError, decompress_content
@@ -100,9 +97,7 @@ class PasteService:
                 return data.decode("utf-8")
         except Exception as exc:
             self.logger.error("Failed to read paste content: %s", exc)
-            storage_operations.labels(
-                operation="get", backend=self._storage_backend_name, status="error"
-            ).inc()
+            storage_operations.labels(operation="get", backend=self._storage_backend_name, status="error").inc()
             return None
 
     async def _save_content(self, paste_id: str, content: str) -> tuple[str, int, bool, int | None] | None:
@@ -155,38 +150,28 @@ class PasteService:
             # Write content (compressed or uncompressed)
             if use_compression and compressed_data:
                 await self.storage_client.put_object(storage_key, compressed_data)
-                storage_operations.labels(
-                    operation="put", backend=self._storage_backend_name, status="success"
-                ).inc()
+                storage_operations.labels(operation="put", backend=self._storage_backend_name, status="success").inc()
                 content_size = len(compressed_data)
                 return storage_key, content_size, True, original_size
             else:
                 await self.storage_client.put_object(storage_key, content.encode("utf-8"))
-                storage_operations.labels(
-                    operation="put", backend=self._storage_backend_name, status="success"
-                ).inc()
+                storage_operations.labels(operation="put", backend=self._storage_backend_name, status="success").inc()
                 content_size = original_size
                 return storage_key, content_size, False, None
 
         except Exception as exc:
             self.logger.error("Failed to save paste content: %s", exc)
-            storage_operations.labels(
-                operation="put", backend=self._storage_backend_name, status="error"
-            ).inc()
+            storage_operations.labels(operation="put", backend=self._storage_backend_name, status="error").inc()
             return None
 
     async def _remove_file(self, storage_key: str):
         """Remove paste file from storage."""
         try:
             await self.storage_client.delete_object(storage_key)
-            storage_operations.labels(
-                operation="delete", backend=self._storage_backend_name, status="success"
-            ).inc()
+            storage_operations.labels(operation="delete", backend=self._storage_backend_name, status="success").inc()
         except Exception as exc:
             self.logger.error("Failed to remove file %s: %s", storage_key, exc)
-            storage_operations.labels(
-                operation="delete", backend=self._storage_backend_name, status="error"
-            ).inc()
+            storage_operations.labels(operation="delete", backend=self._storage_backend_name, status="error").inc()
 
     def verify_storage_limit(self):
         """Verify storage limit (only applicable for local storage)."""
@@ -219,7 +204,7 @@ class PasteService:
 
     async def get_legacy_paste_by_name(self, paste_id: str) -> LegacyPasteResponse | None:
         """Get legacy Hastebin-format paste."""
-        paste_md5: str = hashlib.md5(paste_id.encode()).hexdigest()
+        paste_md5: str = hashlib.md5(paste_id.encode()).hexdigest()  # noqa: S324 - MD5 used for legacy key format, not security
         storage_key = f"hastebin/{paste_md5}"
 
         try:
@@ -382,11 +367,9 @@ class PasteService:
                 paste_operations.labels(operation="delete", status="unauthorized").inc()
                 return False
 
-            # Remove file
-            try:
+            # Remove file (ignore errors - file might already be deleted)
+            with contextlib.suppress(Exception):
                 await self._remove_file(result.content_path)
-            except Exception:
-                pass  # File might already be deleted
 
             # Delete from database
             await session.delete(result)
@@ -476,4 +459,4 @@ class PasteService:
                 status_code=500,
                 detail="Failed to create paste",
                 headers={"Retry-After": "60"},
-            )
+            ) from exc

@@ -8,12 +8,12 @@ refreshes it to ensure accuracy across restarts and in multi-instance deployment
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from app.utils.metrics import active_pastes
-import contextlib
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession

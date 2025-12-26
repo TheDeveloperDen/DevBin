@@ -28,7 +28,7 @@ from app.exceptions import (
     StorageQuotaExceededError,
     UnauthorizedError,
 )
-from app.ratelimit import NoOpLimiter, init_rate_limiter, limiter
+from app.ratelimit import NoOpLimiter, init_rate_limiter  # noqa: F401 - limiter used via module
 from app.services.cleanup_service import CleanupService
 from app.utils.active_pastes_counter import (
     ActivePastesCounter,
@@ -112,6 +112,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # Set cache for pastes route
     from app.api.subroutes.pastes import set_cache
+
     cache_instance = container.cache_client()
     set_cache(cache_instance)
 
@@ -119,9 +120,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     active_pastes_counter = await _init_active_pastes_counter(container)
     active_pastes_counter.start_refresh_task()
 
-    cleanup_service: CleanupService = (
-        await container.cleanup_service()
-    )  # or however you resolve it
+    cleanup_service: CleanupService = await container.cleanup_service()  # or however you resolve it
     cleanup_service.start_cleanup_worker()
     try:
         yield
@@ -174,7 +173,7 @@ def create_app() -> FastAPI:
         return ORJSONResponse(
             status_code=exc.status_code,
             content={"error": exc.message},
-            headers={"WWW-Authenticate": exc.www_authenticate}
+            headers={"WWW-Authenticate": exc.www_authenticate},
         )
 
     @app.exception_handler(StorageQuotaExceededError)

@@ -1,7 +1,6 @@
 """Unit tests for LRUMemoryCache."""
 
 import pytest
-from unittest.mock import AsyncMock, patch
 
 
 class TestLRUMemoryCache:
@@ -11,6 +10,7 @@ class TestLRUMemoryCache:
     def lru_cache(self):
         """Create LRUMemoryCache instance for testing."""
         from app.utils.LRUMemoryCache import LRUMemoryCache
+
         return LRUMemoryCache(max_size=3, ttl=60)
 
     def test_cache_has_correct_name(self, lru_cache):
@@ -25,6 +25,7 @@ class TestLRUMemoryCache:
     def test_cache_defaults(self):
         """Cache should have sensible defaults."""
         from app.utils.LRUMemoryCache import LRUMemoryCache
+
         cache = LRUMemoryCache()
         assert cache.max_size == 128
         assert cache.ttl == 300
@@ -94,7 +95,7 @@ class TestLRUMemoryCache:
         """Cache should handle various value types."""
         await lru_cache._set("string", "hello")
         await lru_cache._set("int", 42)
-        
+
         assert await lru_cache.get("string") == "hello"
         assert await lru_cache.get("int") == 42
 
@@ -103,10 +104,10 @@ class TestLRUMemoryCache:
         """Overwriting an existing key should not trigger eviction."""
         await lru_cache._set("key1", "value1")
         await lru_cache._set("key2", "value2")
-        
+
         # Overwrite key1 (should not add new entry)
         await lru_cache._set("key1", "updated_value1")
-        
+
         # Both keys should exist
         assert await lru_cache.get("key1") == "updated_value1"
         assert await lru_cache.get("key2") == "value2"
@@ -116,7 +117,7 @@ class TestLRUMemoryCache:
         """Delete should remove key from cache."""
         await lru_cache._set("key1", "value1")
         await lru_cache.delete("key1")
-        
+
         result = await lru_cache.get("key1")
         assert result is None
 
@@ -130,10 +131,11 @@ class TestLRUMemoryCache:
     async def test_cache_with_size_one(self):
         """Cache with size 1 should work correctly."""
         from app.utils.LRUMemoryCache import LRUMemoryCache
+
         tiny_cache = LRUMemoryCache(max_size=1, ttl=60)
-        
+
         await tiny_cache._set("key1", "value1")
         await tiny_cache._set("key2", "value2")  # Should evict key1
-        
+
         assert await tiny_cache.get("key1") is None
         assert await tiny_cache.get("key2") == "value2"

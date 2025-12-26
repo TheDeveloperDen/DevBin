@@ -38,7 +38,7 @@ class RedisLock(DistributedLock):
             try:
                 import redis
             except ImportError:
-                raise ImportError("redis is required for Redis locks. Install it with: uv sync --extra")
+                raise ImportError("redis is required for Redis locks. Install it with: uv sync --extra") from None
 
             self._client = redis.Redis(
                 host=self.host,

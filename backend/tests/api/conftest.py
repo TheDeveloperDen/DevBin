@@ -1,4 +1,5 @@
 """Fixtures for API endpoint tests."""
+
 import uuid
 
 import pytest

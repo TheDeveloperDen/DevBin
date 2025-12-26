@@ -8,9 +8,9 @@ UUID_DEFAULT = text("gen_random_uuid()")
 class PasteEntity(Base):
     __tablename__ = "pastes"
     __table_args__ = (
-        Index('idx_pastes_expires_at', 'expires_at'),
-        Index('idx_pastes_deleted_at', 'deleted_at'),
-        Index('idx_pastes_created_at', 'created_at'),
+        Index("idx_pastes_expires_at", "expires_at"),
+        Index("idx_pastes_deleted_at", "deleted_at"),
+        Index("idx_pastes_created_at", "created_at"),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=UUID_DEFAULT)
@@ -18,12 +18,10 @@ class PasteEntity(Base):
     content_path = Column(String, nullable=False)
     content_language = Column(String, nullable=False, server_default="plain_text")
     expires_at = Column(TIMESTAMP(timezone=True), nullable=True)
-    created_at = Column(
-        TIMESTAMP(timezone=True), nullable=False, server_default=func.now()
-    )
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=func.now())
 
     content_size = Column(Integer, nullable=False)
-    is_compressed = Column(Boolean, nullable=False, server_default='false')
+    is_compressed = Column(Boolean, nullable=False, server_default="false")
     original_size = Column(Integer, nullable=True)
 
     creator_ip = Column(String)

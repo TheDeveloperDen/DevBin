@@ -42,9 +42,8 @@ class S3StorageClient(StorageClient):
                 import aioboto3
             except ImportError:
                 raise ImportError(
-                    "aioboto3 is required for S3 storage. "
-                    "Install it with: pip install aioboto3"
-                )
+                    "aioboto3 is required for S3 storage. Install it with: pip install aioboto3"
+                ) from None
 
             session = aioboto3.Session(
                 aws_access_key_id=self.access_key,

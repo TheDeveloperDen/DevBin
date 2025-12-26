@@ -1,18 +1,16 @@
 """Tests for rate limiting functionality."""
 
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch
 
-from pydantic import ValidationError
-
-from app.config import Config, RateLimit, validate_rate_limit
+from app.config import Config, validate_rate_limit
 from app.ratelimit import (
     NoOpLimiter,
     create_exempt_key_func,
     create_limit_resolver,
     create_rate_limiter,
     get_ip_address,
-    LimitName,
 )
 
 
@@ -167,6 +165,7 @@ class TestCreateRateLimiter:
         limiter = create_rate_limiter(config)
 
         from slowapi import Limiter
+
         assert isinstance(limiter, Limiter)
 
     def test_redis_backend_falls_back_to_memory_on_error(self):
@@ -184,6 +183,7 @@ class TestCreateRateLimiter:
         limiter = create_rate_limiter(config)
 
         from slowapi import Limiter
+
         assert isinstance(limiter, Limiter)
 
     def test_redis_backend_builds_correct_uri(self):

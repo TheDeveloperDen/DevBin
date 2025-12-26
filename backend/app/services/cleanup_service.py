@@ -102,7 +102,7 @@ class CleanupService:
                         break
 
                     # Delete files first
-                    for paste_id, content_path in batch:
+                    for _paste_id, content_path in batch:
                         file_path = Path(self.paste_base_folder_path) / content_path
                         try:
                             if file_path.exists():
@@ -176,7 +176,7 @@ class CleanupService:
                         break
 
                     # Delete files first
-                    for paste_id, content_path in batch:
+                    for _paste_id, content_path in batch:
                         file_path = Path(self.paste_base_folder_path) / content_path
                         try:
                             if file_path.exists():

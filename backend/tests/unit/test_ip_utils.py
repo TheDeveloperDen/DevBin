@@ -1,7 +1,8 @@
 """Unit tests for IP utility functions."""
 
-import pytest
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network
+
+import pytest
 
 from app.utils.ip import (
     is_ip_in_trusted_hosts,

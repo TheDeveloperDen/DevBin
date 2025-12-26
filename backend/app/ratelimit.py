@@ -1,5 +1,6 @@
 import logging
-from typing import Callable, Literal
+from collections.abc import Callable
+from typing import Literal
 from uuid import uuid4
 
 from slowapi import Limiter
@@ -41,10 +42,9 @@ def create_exempt_key_func(config: Config) -> Callable[[Request], str]:
 
     def get_exempt_key(request: Request) -> str:
         auth_header = request.headers.get("Authorization")
-        if auth_header and config.RATELIMIT_BYPASS_TOKENS:
-            if auth_header in config.RATELIMIT_BYPASS_TOKENS:
-                # Return unique key for each request = effectively unlimited
-                return str(uuid4())
+        if auth_header and config.RATELIMIT_BYPASS_TOKENS and auth_header in config.RATELIMIT_BYPASS_TOKENS:
+            # Return unique key for each request = effectively unlimited
+            return str(uuid4())
         return get_ip_address(request)
 
     return get_exempt_key

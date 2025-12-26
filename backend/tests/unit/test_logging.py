@@ -1,11 +1,11 @@
 """Unit tests for logging configuration utilities."""
 
 import logging
-import pytest
-from unittest.mock import patch, MagicMock
-from io import StringIO
+from unittest.mock import MagicMock, patch
 
-from app.utils.logging import configure_logging, _configure_text_logging
+import pytest
+
+from app.utils.logging import _configure_text_logging, configure_logging
 
 
 @pytest.mark.unit
@@ -15,6 +15,7 @@ class TestConfigureLogging:
     def test_configure_logging_function_exists(self):
         """configure_logging function should exist."""
         from app.utils.logging import configure_logging
+
         assert callable(configure_logging)
 
     def test_configure_logging_accepts_level_parameter(self):
@@ -29,7 +30,7 @@ class TestConfigureLogging:
 
     def test_configure_logging_text_format_calls_helper(self):
         """configure_logging with text format should call _configure_text_logging."""
-        with patch('app.utils.logging._configure_text_logging') as mock_text:
+        with patch("app.utils.logging._configure_text_logging") as mock_text:
             configure_logging(level="INFO", log_format="text")
             mock_text.assert_called_once()
 
@@ -45,14 +46,16 @@ class TestConfigureLogging:
 
     def test_configure_logging_json_format_imports_structlog(self):
         """configure_logging with json format should try to import structlog."""
+        import contextlib
+
         # Mock structlog to avoid import errors
         mock_structlog = MagicMock()
-        with patch.dict('sys.modules', {'structlog': mock_structlog}):
-            with patch('app.utils.logging._configure_text_logging'):
-                try:
-                    configure_logging(log_format="json")
-                except ImportError:
-                    pass  # Expected if structlog not available
+        with (
+            patch.dict("sys.modules", {"structlog": mock_structlog}),
+            patch("app.utils.logging._configure_text_logging"),
+            contextlib.suppress(ImportError),
+        ):
+            configure_logging(log_format="json")
 
     def test_configure_logging_json_format_falls_back(self):
         """configure_logging with json format should fall back to text if structlog unavailable."""
@@ -68,47 +71,49 @@ class TestConfigureTextLogging:
     def test_configure_text_logging_function_exists(self):
         """_configure_text_logging function should exist."""
         from app.utils.logging import _configure_text_logging
+
         assert callable(_configure_text_logging)
 
     def test_configure_text_logging_calls_basic_config(self):
         """_configure_text_logging should call logging.basicConfig."""
-        with patch('logging.basicConfig') as mock_basic_config:
+        with patch("logging.basicConfig") as mock_basic_config:
             _configure_text_logging(logging.INFO)
             mock_basic_config.assert_called_once()
 
     def test_text_logging_sets_format(self):
         """_configure_text_logging should set a format."""
-        with patch('logging.basicConfig') as mock_basic_config:
+        with patch("logging.basicConfig") as mock_basic_config:
             _configure_text_logging(logging.INFO)
             call_kwargs = mock_basic_config.call_args[1]
-            assert 'format' in call_kwargs
-            assert 'levelname' in call_kwargs['format']
+            assert "format" in call_kwargs
+            assert "levelname" in call_kwargs["format"]
 
     def test_text_logging_sets_stream_to_stdout(self):
         """_configure_text_logging should set stream to stdout."""
         import sys
-        with patch('logging.basicConfig') as mock_basic_config:
+
+        with patch("logging.basicConfig") as mock_basic_config:
             _configure_text_logging(logging.INFO)
             call_kwargs = mock_basic_config.call_args[1]
-            assert call_kwargs.get('stream') == sys.stdout
+            assert call_kwargs.get("stream") == sys.stdout
 
     def test_text_logging_reduces_httpx_noise(self):
         """_configure_text_logging should set httpx logger to WARNING."""
-        with patch('logging.basicConfig'):
+        with patch("logging.basicConfig"):
             _configure_text_logging(logging.DEBUG)
             httpx_logger = logging.getLogger("httpx")
             assert httpx_logger.level == logging.WARNING
 
     def test_text_logging_reduces_httpcore_noise(self):
         """_configure_text_logging should set httpcore logger to WARNING."""
-        with patch('logging.basicConfig'):
+        with patch("logging.basicConfig"):
             _configure_text_logging(logging.DEBUG)
             httpcore_logger = logging.getLogger("httpcore")
             assert httpcore_logger.level == logging.WARNING
 
     def test_text_logging_reduces_asyncio_noise(self):
         """_configure_text_logging should set asyncio logger to WARNING."""
-        with patch('logging.basicConfig'):
+        with patch("logging.basicConfig"):
             _configure_text_logging(logging.DEBUG)
             asyncio_logger = logging.getLogger("asyncio")
             assert asyncio_logger.level == logging.WARNING
@@ -155,9 +160,9 @@ class TestLoggingOutput:
 
     def test_logger_can_be_created(self):
         """Should be able to create a logger after configuration."""
-        with patch('logging.basicConfig'):
+        with patch("logging.basicConfig"):
             _configure_text_logging(logging.INFO)
-        
+
         logger = logging.getLogger("test_logger")
         assert logger is not None
 
@@ -168,7 +173,7 @@ class TestLoggingOutput:
 
     def test_child_logger_inherits_settings(self):
         """Child loggers should inherit parent settings."""
-        parent = logging.getLogger("parent")
+        logging.getLogger("parent")  # Create parent logger
         child = logging.getLogger("parent.child")
-        
+
         assert child.parent.name == "parent"

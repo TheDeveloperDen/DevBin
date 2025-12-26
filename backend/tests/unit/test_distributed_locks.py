@@ -1,4 +1,5 @@
 """Tests for distributed locking implementations."""
+
 import tempfile
 from pathlib import Path
 

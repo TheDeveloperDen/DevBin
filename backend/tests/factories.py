@@ -124,7 +124,7 @@ def expired_paste_factory(paste_service: PasteService, sample_user_metadata: Use
         import os
         from pathlib import Path
 
-        storage_path = Path(os.getenv("APP_BASE_FOLDER_PATH", "/tmp/devbin_test_files"))
+        storage_path = Path(os.getenv("APP_BASE_FOLDER_PATH", "/tmp/devbin_test_files"))  # noqa: S108
         storage_path.mkdir(parents=True, exist_ok=True)
 
         paste_file = storage_path / f"{paste_id}.txt"

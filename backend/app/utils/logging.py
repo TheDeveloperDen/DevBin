@@ -54,10 +54,7 @@ def configure_logging(
 
         except ImportError:
             # Fallback to text format if structlog not installed
-            logging.warning(
-                "structlog not installed, falling back to text format. "
-                "Install with: pip install structlog"
-            )
+            logging.warning("structlog not installed, falling back to text format. Install with: pip install structlog")
             _configure_text_logging(numeric_level)
     else:
         _configure_text_logging(numeric_level)
@@ -66,9 +63,7 @@ def configure_logging(
 def _configure_text_logging(level: int) -> None:
     """Configure standard text-based logging."""
     # Custom format with timestamp, level, name, and message
-    log_format = (
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
     logging.basicConfig(
         format=log_format,
