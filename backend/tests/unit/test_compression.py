@@ -1,11 +1,7 @@
 """Unit tests for compression utilities."""
 import pytest
-from app.utils.compression import (
-    compress_content,
-    decompress_content,
-    should_compress,
-    CompressionError
-)
+
+from app.utils.compression import CompressionError, compress_content, decompress_content, should_compress
 
 
 class TestCompressionUtils:

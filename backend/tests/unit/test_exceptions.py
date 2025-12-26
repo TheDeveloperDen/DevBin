@@ -1,17 +1,16 @@
 """Tests for custom exception classes."""
-import pytest
 
 from app.exceptions import (
+    CacheError,
+    CompressionError,
     ContentTooLargeError,
+    DatabaseError,
     DevBinException,
     InvalidTokenError,
     PasteExpiredError,
     PasteNotFoundError,
     StorageError,
     StorageQuotaExceededError,
-    CompressionError,
-    DatabaseError,
-    CacheError,
 )
 
 

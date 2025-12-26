@@ -1,8 +1,9 @@
 import asyncio
+import contextlib
 import logging
-from datetime import datetime, timedelta, timezone
+from collections.abc import Coroutine
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Coroutine
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,10 +16,10 @@ from app.locks import DistributedLock
 
 class CleanupService:
     def __init__(
-            self,
-            session_maker: sessionmaker[AsyncSession],  # pyright: ignore[reportInvalidTypeArguments]
-            paste_base_folder_path: str = "",
-            lock: DistributedLock | None = None,
+        self,
+        session_maker: sessionmaker[AsyncSession],
+        paste_base_folder_path: str = "",
+        lock: DistributedLock | None = None,
     ):
         self.session_maker: sessionmaker[AsyncSession] = session_maker
         self.paste_base_folder_path: str = paste_base_folder_path
@@ -39,10 +40,8 @@ class CleanupService:
         """Stop the background cleanup worker"""
         if self._cleanup_task is not None:
             self._cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
             self._cleanup_task = None
             if self._lock:
                 self._lock.release("cleanup")
@@ -83,13 +82,15 @@ class CleanupService:
             error: bool = False
 
             async with self.session_maker() as session:
-                current_time = datetime.now(tz=timezone.utc)
+                current_time = datetime.now(tz=UTC)
 
                 while True:
                     # Process in batches of 100 to avoid loading all records into memory
-                    stmt = select(PasteEntity.id, PasteEntity.content_path).where(
-                        PasteEntity.expires_at < current_time
-                    ).limit(BATCH_SIZE)
+                    stmt = (
+                        select(PasteEntity.id, PasteEntity.content_path)
+                        .where(PasteEntity.expires_at < current_time)
+                        .limit(BATCH_SIZE)
+                    )
                     result = await session.execute(stmt)
                     batch = result.fetchall()
 
@@ -104,9 +105,7 @@ class CleanupService:
                                 file_path.unlink()
                         except Exception as exc:
                             error = True
-                            self.logger.error(
-                                "Failed to remove file %s: %s", file_path, exc
-                            )
+                            self.logger.error("Failed to remove file %s: %s", file_path, exc)
 
                     # Bulk delete from database
                     paste_ids = [paste_id for paste_id, _ in batch]
@@ -134,9 +133,7 @@ class CleanupService:
     async def _cleanup_deleted_pastes(self):
         """Remove deleted pastes that have been marked for deletion beyond the configured time"""
         if config.KEEP_DELETED_PASTES_TIME_HOURS == -1:
-            self.logger.info(
-                "Skipping deletion of deleted pastes, because KEEP_DELETED_PASTES_TIME_HOURS is -1"
-            )
+            self.logger.info("Skipping deletion of deleted pastes, because KEEP_DELETED_PASTES_TIME_HOURS is -1")
             return
 
         self.logger.info("Cleaning up deleted pastes")
@@ -148,17 +145,18 @@ class CleanupService:
             error: bool = False
 
             async with self.session_maker() as session:
-                current_time = datetime.now(tz=timezone.utc)
+                current_time = datetime.now(tz=UTC)
                 delete_time_threshold = current_time.replace(microsecond=0) - timedelta(
                     hours=config.KEEP_DELETED_PASTES_TIME_HOURS
                 )
 
                 while True:
                     # Process in batches of 100 to avoid loading all records into memory
-                    stmt = select(PasteEntity.id, PasteEntity.content_path).where(
-                        PasteEntity.deleted_at.isnot(None)
-                        & (PasteEntity.deleted_at < delete_time_threshold)
-                    ).limit(BATCH_SIZE)
+                    stmt = (
+                        select(PasteEntity.id, PasteEntity.content_path)
+                        .where(PasteEntity.deleted_at.isnot(None) & (PasteEntity.deleted_at < delete_time_threshold))
+                        .limit(BATCH_SIZE)
+                    )
                     result = await session.execute(stmt)
                     batch = result.fetchall()
 
@@ -173,9 +171,7 @@ class CleanupService:
                                 file_path.unlink()
                         except Exception as exc:
                             error = True
-                            self.logger.error(
-                                "Failed to remove file %s: %s", file_path, exc
-                            )
+                            self.logger.error("Failed to remove file %s: %s", file_path, exc)
 
                     # Bulk delete from database
                     paste_ids = [paste_id for paste_id, _ in batch]

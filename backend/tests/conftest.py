@@ -1,15 +1,16 @@
 """Shared test fixtures for DevBin backend tests."""
+
 import json
 import os
 import shutil
 import tempfile
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
-from typing import AsyncGenerator, Generator
 
 from tests.constants import (
+    TEST_ALLOW_CORS_WILDCARD,
     TEST_BYPASS_TOKEN,
     TEST_CORS_DOMAINS,
-    TEST_ALLOW_CORS_WILDCARD,
     TEST_DB_URL,
     TEST_FILE_STORAGE_PATH,
 )
@@ -25,6 +26,8 @@ os.environ.setdefault("APP_CORS_DOMAINS", json.dumps(TEST_CORS_DOMAINS))
 # Set a very high rate limit for tests (essentially disabled)
 os.environ.setdefault("RATELIMIT_STORAGE_URL", "memory://")
 os.environ.setdefault("RATELIMIT_ENABLED", "false")
+
+from datetime import UTC
 
 import pytest
 import pytest_asyncio
@@ -59,7 +62,7 @@ def test_config() -> Config:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def test_db_engine(test_config: Config) -> AsyncGenerator[AsyncEngine, None]:
+async def test_db_engine(test_config: Config) -> AsyncGenerator[AsyncEngine]:
     """Create test database engine and tables."""
     engine = create_async_engine(test_config.DATABASE_URL, echo=False)
 
@@ -76,11 +79,9 @@ async def test_db_engine(test_config: Config) -> AsyncGenerator[AsyncEngine, Non
 
 
 @pytest_asyncio.fixture(scope="function")
-async def db_session(test_db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+async def db_session(test_db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession]:
     """Create test database session with automatic rollback."""
-    async_session = sessionmaker(
-        test_db_engine, class_=AsyncSession, expire_on_commit=False
-    )
+    async_session = sessionmaker(test_db_engine, class_=AsyncSession, expire_on_commit=False)
 
     async with async_session() as session:
         yield session
@@ -88,7 +89,7 @@ async def db_session(test_db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession
 
 
 @pytest.fixture(scope="function")
-def temp_file_storage() -> Generator[Path, None, None]:
+def temp_file_storage() -> Generator[Path]:
     """Create temporary directory for file storage tests."""
     temp_dir = Path(tempfile.mkdtemp(prefix="devbin_test_"))
     yield temp_dir
@@ -109,32 +110,29 @@ def test_container(test_db_engine: AsyncEngine):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def test_client(test_container: Container) -> AsyncGenerator[AsyncClient, None]:
+async def test_client(test_container: Container) -> AsyncGenerator[AsyncClient]:
     """Create FastAPI test client with dependency overrides."""
     app = create_app()
     app.container = test_container
 
     # Set cache for pastes route (required for tests)
     from app.api.subroutes.pastes import set_cache
+
     cache_instance = test_container.cache_client()
     set_cache(cache_instance)
 
     # Disable rate limiting for tests by removing state
     app.state.limiter = None
 
-    async with AsyncClient(
-            transport=ASGITransport(app=app),
-            base_url="http://test"
-    ) as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
 
 
 @pytest_asyncio.fixture(scope="function")
-async def test_client_with_metrics_auth(
-    test_container: Container
-) -> AsyncGenerator[AsyncClient, None]:
+async def test_client_with_metrics_auth(test_container: Container) -> AsyncGenerator[AsyncClient]:
     """Create FastAPI test client with metrics authentication enabled."""
     import os
+
     from app.config import config as global_config
 
     # Temporarily set metrics token
@@ -147,15 +145,13 @@ async def test_client_with_metrics_auth(
         app.container = test_container
 
         from app.api.subroutes.pastes import set_cache
+
         cache_instance = test_container.cache_client()
         set_cache(cache_instance)
 
         app.state.limiter = None  # Disable rate limiting
 
-        async with AsyncClient(
-            transport=ASGITransport(app=app),
-            base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             yield client
     finally:
         if original_token:
@@ -197,15 +193,13 @@ async def legacy_plaintext_token_paste_factory(db_session: AsyncSession):
     This is useful for testing token migration from plaintext to hashed tokens.
     Returns a function that creates a paste with a plaintext token.
     """
-    from app.db.models import PasteEntity
-    from datetime import datetime, timezone
     import uuid
+    from datetime import datetime
+
+    from app.db.models import PasteEntity
 
     async def _create_legacy_paste(
-        plaintext_token: str,
-        paste_id: str = None,
-        title: str = "Legacy Paste",
-        content_language: str = "plain_text"
+        plaintext_token: str, paste_id: str = None, title: str = "Legacy Paste", content_language: str = "plain_text"
     ):
         """Create a paste with a legacy plaintext token."""
         paste_id = paste_id or str(uuid.uuid4())
@@ -216,7 +210,7 @@ async def legacy_plaintext_token_paste_factory(db_session: AsyncSession):
             content_language=content_language,
             edit_token=plaintext_token,  # Store as plaintext (legacy behavior)
             delete_token=plaintext_token,
-            created_at=datetime.now(tz=timezone.utc),
+            created_at=datetime.now(tz=UTC),
         )
 
         db_session.add(paste)

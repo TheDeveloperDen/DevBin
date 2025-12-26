@@ -1,6 +1,6 @@
 """Test data factories for creating test entities with flexible parameters."""
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+
+from datetime import UTC, datetime, timedelta
 
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,12 +22,13 @@ def paste_factory(paste_service: PasteService, sample_user_metadata: UserMetaDat
             paste = await paste_factory(title="Custom Title")
             paste_with_expiry = await paste_factory(expires_in_hours=24)
     """
+
     async def _create_paste(
         title: str = "Test Paste",
         content: str = "Test content",
         content_language: PasteContentLanguage = PasteContentLanguage.plain_text,
-        expires_in_hours: Optional[int] = None,
-        user_metadata: Optional[UserMetaData] = None,
+        expires_in_hours: int | None = None,
+        user_metadata: UserMetaData | None = None,
     ):
         """
         Create a paste with the given parameters.
@@ -44,7 +45,7 @@ def paste_factory(paste_service: PasteService, sample_user_metadata: UserMetaDat
         """
         expires_at = None
         if expires_in_hours is not None:
-            expires_at = datetime.now(tz=timezone.utc) + timedelta(hours=expires_in_hours)
+            expires_at = datetime.now(tz=UTC) + timedelta(hours=expires_in_hours)
 
         paste_dto = CreatePaste(
             title=title,
@@ -72,6 +73,7 @@ def expired_paste_factory(paste_service: PasteService, sample_user_metadata: Use
         async def test_expired_behavior(expired_paste_factory):
             paste = await expired_paste_factory(expired_hours_ago=1)
     """
+
     async def _create_expired_paste(
         title: str = "Expired Paste",
         content: str = "This paste has expired",
@@ -90,16 +92,17 @@ def expired_paste_factory(paste_service: PasteService, sample_user_metadata: Use
         Returns:
             Dictionary with paste info (id, edit_token, delete_token)
         """
+        import uuid
+
         from app.db.models import PasteEntity
         from app.utils.token_utils import hash_token
-        import uuid
 
         paste_id = str(uuid.uuid4())
         edit_token = uuid.uuid4().hex
         delete_token = uuid.uuid4().hex
 
         # Create paste that expired in the past
-        expires_at = datetime.now(tz=timezone.utc) - timedelta(hours=expired_hours_ago)
+        expires_at = datetime.now(tz=UTC) - timedelta(hours=expired_hours_ago)
 
         paste = PasteEntity(
             id=paste_id,
@@ -107,7 +110,7 @@ def expired_paste_factory(paste_service: PasteService, sample_user_metadata: Use
             content_language=content_language.value,
             edit_token=hash_token(edit_token),
             delete_token=hash_token(delete_token),
-            created_at=datetime.now(tz=timezone.utc) - timedelta(hours=expired_hours_ago + 1),
+            created_at=datetime.now(tz=UTC) - timedelta(hours=expired_hours_ago + 1),
             expires_at=expires_at,
             user_ip=sample_user_metadata.user_ip,
             user_agent=sample_user_metadata.user_agent,
@@ -118,8 +121,8 @@ def expired_paste_factory(paste_service: PasteService, sample_user_metadata: Use
         await db_session.refresh(paste)
 
         # Also create the file
-        from pathlib import Path
         import os
+        from pathlib import Path
 
         storage_path = Path(os.getenv("APP_BASE_FOLDER_PATH", "/tmp/devbin_test_files"))
         storage_path.mkdir(parents=True, exist_ok=True)
@@ -150,10 +153,11 @@ def paste_with_custom_language_factory(paste_service: PasteService, sample_user_
                 content="print('hello')"
             )
     """
+
     async def _create_paste_with_language(
         language: PasteContentLanguage,
         content: str,
-        title: Optional[str] = None,
+        title: str | None = None,
     ):
         """
         Create a paste with specific language.

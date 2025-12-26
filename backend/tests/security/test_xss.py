@@ -1,4 +1,5 @@
 """Security tests for XSS (Cross-Site Scripting) prevention."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -8,9 +9,7 @@ from httpx import AsyncClient
 class TestXSSPrevention:
     """Tests to ensure XSS attacks are prevented."""
 
-    async def test_paste_content_xss_script_tags(
-            self, test_client: AsyncClient, bypass_headers
-    ):
+    async def test_paste_content_xss_script_tags(self, test_client: AsyncClient, bypass_headers):
         """Paste content with script tags should be stored safely."""
         xss_payload = "<script>alert('XSS')</script>"
 
@@ -36,9 +35,7 @@ class TestXSSPrevention:
         # Response should be JSON, not HTML (prevents execution)
         assert get_response.headers["content-type"].startswith("application/json")
 
-    async def test_paste_title_xss_prevention(
-            self, test_client: AsyncClient, bypass_headers
-    ):
+    async def test_paste_title_xss_prevention(self, test_client: AsyncClient, bypass_headers):
         """Paste title with XSS should be handled safely."""
         xss_payloads = [
             "<script>alert('XSS')</script>",
@@ -68,9 +65,7 @@ class TestXSSPrevention:
             # Title should be returned as-is
             assert data["title"] == xss_payload
 
-    async def test_paste_content_html_entities(
-            self, test_client: AsyncClient, bypass_headers
-    ):
+    async def test_paste_content_html_entities(self, test_client: AsyncClient, bypass_headers):
         """HTML entities in paste content should be preserved."""
         # Use simple HTML that passes validation
         content_with_html = "function test() { return x > y && a < b; }"
@@ -97,9 +92,7 @@ class TestXSSPrevention:
             # If validation fails, that's also acceptable behavior
             assert response.status_code == 422
 
-    async def test_paste_event_handlers_in_content(
-            self, test_client: AsyncClient, bypass_headers
-    ):
+    async def test_paste_event_handlers_in_content(self, test_client: AsyncClient, bypass_headers):
         """Event handlers in paste content should be stored safely."""
         # Use plain text content that looks like event handlers
         content = "onclick=myFunction(); onload=initialize();"
@@ -125,9 +118,7 @@ class TestXSSPrevention:
             # If validation fails, that's also acceptable behavior
             assert response.status_code == 422
 
-    async def test_paste_data_uri_xss_attempt(
-            self, test_client: AsyncClient, bypass_headers
-    ):
+    async def test_paste_data_uri_xss_attempt(self, test_client: AsyncClient, bypass_headers):
         """Data URIs with JavaScript should be handled safely."""
         data_uri_payloads = [
             "data:text/html,<script>alert('XSS')</script>",
@@ -158,7 +149,7 @@ class TestContentSecurityHeaders:
     """Tests to ensure proper security headers are set."""
 
     async def test_api_responses_have_json_content_type(
-            self, test_client: AsyncClient, authenticated_paste, bypass_headers
+        self, test_client: AsyncClient, authenticated_paste, bypass_headers
     ):
         """API responses should use application/json content type."""
         paste_id = authenticated_paste["id"]
@@ -169,11 +160,10 @@ class TestContentSecurityHeaders:
         assert "content-type" in response.headers
         assert response.headers["content-type"].startswith("application/json")
 
-    async def test_error_responses_do_not_expose_internals(
-            self, test_client: AsyncClient, bypass_headers
-    ):
+    async def test_error_responses_do_not_expose_internals(self, test_client: AsyncClient, bypass_headers):
         """Error responses should not expose internal details."""
         import uuid
+
         # Trigger a 404 error with valid UUID format
         nonexistent_id = str(uuid.uuid4())
         response = await test_client.get(f"/pastes/{nonexistent_id}", headers=bypass_headers)

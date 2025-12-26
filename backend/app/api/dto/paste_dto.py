@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 
 from pydantic import UUID4, BaseModel, Field, field_validator
@@ -42,12 +42,9 @@ class CreatePaste(BaseModel):
     def validate_expires_at(cls, v):
         if v is not None:
             # Ensure timezone-aware datetime
-            if v.tzinfo is None:
-                v = v.replace(tzinfo=timezone.utc)
-            else:
-                v = v.astimezone(timezone.utc)
+            v = v.replace(tzinfo=UTC) if v.tzinfo is None else v.astimezone(UTC)
             # Compare with timezone-aware current time
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             if v < now:
                 raise ValueError("expires_in must be in the future")
         return v

@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from dependency_injector.wiring import Provide, inject
@@ -21,16 +22,21 @@ from app.config import config
 from app.containers import Container
 from app.ratelimit import get_ip_address, limiter
 from app.services.paste_service import PasteService
+from app.utils.LRUMemoryCache import LRUMemoryCache
+
+if TYPE_CHECKING:
+    from aiocache import RedisCache
+
 
 logger = logging.getLogger(__name__)
 
 pastes_route = APIRouter(prefix="/pastes", tags=["Paste"])
 
 # Cache will be set during container initialization
-cache = None
+cache: "RedisCache | LRUMemoryCache | None" = None
 
 
-def set_cache(cache_instance):
+def set_cache(cache_instance: "RedisCache | LRUMemoryCache"):
     """Set the cache instance from the container."""
     global cache
     cache = cache_instance
@@ -55,9 +61,9 @@ def get_exempt_key(request: Request) -> str:
 @limiter.limit("10/minute", key_func=get_exempt_key)
 @inject
 async def get_paste(
-        request: Request,
-        paste_id: str,
-        paste_service: PasteService = Depends(Provide[Container.paste_service]),
+    request: Request,
+    paste_id: str,
+    paste_service: PasteService = Depends(Provide[Container.paste_service]),
 ):
     cached_result = await cache.get(paste_id)
     if cached_result:
@@ -102,9 +108,9 @@ async def get_paste(
 @limiter.limit("10/minute", key_func=get_exempt_key)
 @inject
 async def get_paste(
-        request: Request,
-        paste_id: UUID4,
-        paste_service: PasteService = Depends(Provide[Container.paste_service]),
+    request: Request,
+    paste_id: UUID4,
+    paste_service: PasteService = Depends(Provide[Container.paste_service]),
 ):
     cached_result = await cache.get(paste_id)
     if cached_result:
@@ -145,24 +151,22 @@ async def get_paste(
 @limiter.limit("4/minute", key_func=get_exempt_key)
 @inject
 async def create_paste(
-        request: Request,
-        create_paste_body: CreatePaste,
-        paste_service: PasteService = Depends(Provide[Container.paste_service]),
+    request: Request,
+    create_paste_body: CreatePaste,
+    paste_service: PasteService = Depends(Provide[Container.paste_service]),
 ):
-    return await paste_service.create_paste(
-        create_paste_body, request.state.user_metadata
-    )
+    return await paste_service.create_paste(create_paste_body, request.state.user_metadata)
 
 
 @pastes_route.put("/{paste_id}")
 @limiter.limit("4/minute", key_func=get_exempt_key)
 @inject
 async def edit_paste(
-        request: Request,
-        paste_id: UUID4,
-        edit_paste_body: EditPaste,
-        edit_token: str = Security(edit_token_key_header),
-        paste_service: PasteService = Depends(Provide[Container.paste_service]),
+    request: Request,
+    paste_id: UUID4,
+    edit_paste_body: EditPaste,
+    edit_token: str = Security(edit_token_key_header),
+    paste_service: PasteService = Depends(Provide[Container.paste_service]),
 ):
     result = await paste_service.edit_paste(paste_id, edit_paste_body, edit_token)
     if not result:
@@ -182,10 +186,10 @@ async def edit_paste(
 @limiter.limit("4/minute", key_func=get_exempt_key)
 @inject
 async def delete_paste(
-        request: Request,
-        paste_id: UUID4,
-        delete_token: str = Security(delete_token_key_header),
-        paste_service: PasteService = Depends(Provide[Container.paste_service]),
+    request: Request,
+    paste_id: UUID4,
+    delete_token: str = Security(delete_token_key_header),
+    paste_service: PasteService = Depends(Provide[Container.paste_service]),
 ):
     result = await paste_service.delete_paste(paste_id, delete_token)
     if not result:

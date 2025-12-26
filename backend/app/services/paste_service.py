@@ -5,13 +5,10 @@ import hashlib
 import logging
 import shutil
 import uuid
-from datetime import datetime, timezone
-from os import path
+from collections.abc import Coroutine
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Coroutine
 
-import aiofiles
-from aiofiles import os
 from fastapi import HTTPException
 from pydantic import UUID4
 from sqlalchemy import or_, select
@@ -36,10 +33,10 @@ from app.utils.token_utils import hash_token, is_token_hashed, verify_token
 
 class PasteService:
     def __init__(
-            self,
-            session: sessionmaker[AsyncSession],
-            cleanup_service: CleanupService,
-            storage_client: StorageClient,
+        self,
+        session: sessionmaker[AsyncSession],
+        cleanup_service: CleanupService,
+        storage_client: StorageClient,
     ):
         self.session_maker: sessionmaker[AsyncSession] = session
         self.storage_client: StorageClient = storage_client
@@ -48,9 +45,7 @@ class PasteService:
         self._lock_file: Path = Path(".cleanup.lock")
         self._cleanup_service: CleanupService = cleanup_service
 
-    async def _read_content(
-        self, paste_path: str, is_compressed: bool = False
-    ) -> str | None:
+    async def _read_content(self, paste_path: str, is_compressed: bool = False) -> str | None:
         """
         Read paste content, handling decompression if needed.
 
@@ -73,19 +68,15 @@ class PasteService:
                 try:
                     return decompress_content(data)
                 except CompressionError as exc:
-                    self.logger.error(
-                        "Failed to decompress paste at %s: %s", paste_path, exc
-                    )
+                    self.logger.error("Failed to decompress paste at %s: %s", paste_path, exc)
                     return None
             else:
-                return data.decode('utf-8')
+                return data.decode("utf-8")
         except Exception as exc:
             self.logger.error("Failed to read paste content: %s", exc)
             return None
 
-    async def _save_content(
-        self, paste_id: str, content: str
-    ) -> tuple[str, int, bool, int | None] | None:
+    async def _save_content(self, paste_id: str, content: str) -> tuple[str, int, bool, int | None] | None:
         """
         Save paste content, optionally compressed.
 
@@ -102,15 +93,11 @@ class PasteService:
             # Determine if we should compress
             use_compression = False
             compressed_data = None
-            original_size = len(content.encode('utf-8'))
+            original_size = len(content.encode("utf-8"))
 
-            if config.COMPRESSION_ENABLED and should_compress(
-                content, config.COMPRESSION_THRESHOLD_BYTES
-            ):
+            if config.COMPRESSION_ENABLED and should_compress(content, config.COMPRESSION_THRESHOLD_BYTES):
                 try:
-                    compressed_data, original_size = compress_content(
-                        content, config.COMPRESSION_LEVEL
-                    )
+                    compressed_data, original_size = compress_content(content, config.COMPRESSION_LEVEL)
                     # Only use compression if it actually saves space
                     if len(compressed_data) < original_size:
                         use_compression = True
@@ -142,7 +129,7 @@ class PasteService:
                 content_size = len(compressed_data)
                 return storage_key, content_size, True, original_size
             else:
-                await self.storage_client.put_object(storage_key, content.encode('utf-8'))
+                await self.storage_client.put_object(storage_key, content.encode("utf-8"))
                 content_size = original_size
                 return storage_key, content_size, False, None
 
@@ -186,9 +173,7 @@ class PasteService:
             # If we can't check, better to allow the operation to proceed
             return True
 
-    async def get_legacy_paste_by_name(
-            self, paste_id: str
-    ) -> LegacyPasteResponse | None:
+    async def get_legacy_paste_by_name(self, paste_id: str) -> LegacyPasteResponse | None:
         """Get legacy Hastebin-format paste."""
         paste_md5: str = hashlib.md5(paste_id.encode()).hexdigest()
         storage_key = f"hastebin/{paste_md5}"
@@ -196,7 +181,7 @@ class PasteService:
         try:
             data = await self.storage_client.get_object(storage_key)
             if data is not None:
-                content = data.decode('utf-8')
+                content = data.decode("utf-8")
                 return LegacyPasteResponse(content=content)
         except Exception as exc:
             self.logger.debug("Legacy paste not found: %s", exc)
@@ -209,15 +194,13 @@ class PasteService:
                 .where(
                     PasteEntity.id == paste_id,
                     or_(
-                        PasteEntity.expires_at > datetime.now(tz=timezone.utc),
+                        PasteEntity.expires_at > datetime.now(tz=UTC),
                         PasteEntity.expires_at.is_(None),
                     ),
                 )
                 .limit(1)
             )
-            result: PasteEntity | None = (
-                await session.execute(stmt)
-            ).scalar_one_or_none()
+            result: PasteEntity | None = (await session.execute(stmt)).scalar_one_or_none()
             if result is None:
                 return None
             content = await self._read_content(
@@ -234,24 +217,20 @@ class PasteService:
                 last_updated_at=result.last_updated_at,
             )
 
-    async def edit_paste(
-            self, paste_id: UUID4, edit_paste: EditPaste, edit_token: str
-    ) -> PasteResponse | None:
+    async def edit_paste(self, paste_id: UUID4, edit_paste: EditPaste, edit_token: str) -> PasteResponse | None:
         async with self.session_maker() as session:
             stmt = (
                 select(PasteEntity)
                 .where(
                     PasteEntity.id == paste_id,
                     or_(
-                        PasteEntity.expires_at > datetime.now(tz=timezone.utc),
+                        PasteEntity.expires_at > datetime.now(tz=UTC),
                         PasteEntity.expires_at.is_(None),
                     ),
                 )
                 .limit(1)
             )
-            result: PasteEntity | None = (
-                await session.execute(stmt)
-            ).scalar_one_or_none()
+            result: PasteEntity | None = (await session.execute(stmt)).scalar_one_or_none()
 
             if result is None:
                 return None
@@ -267,17 +246,13 @@ class PasteService:
                 if token_valid:
                     # Opportunistically upgrade to hashed token
                     result.edit_token = hash_token(edit_token)
-                    self.logger.info(
-                        "Upgraded edit token to hashed format for paste %s", paste_id
-                    )
+                    self.logger.info("Upgraded edit token to hashed format for paste %s", paste_id)
 
             if not token_valid:
                 return None
 
             # Update only the fields that are provided (not None)
-            if (
-                    edit_paste.title is not None
-            ):  # Using ellipsis as sentinel for "not provided"
+            if edit_paste.title is not None:  # Using ellipsis as sentinel for "not provided"
                 result.title = edit_paste.title
             if edit_paste.content_language is not None:
                 result.content_language = edit_paste.content_language.value
@@ -286,9 +261,7 @@ class PasteService:
 
             # Handle content update separately
             if edit_paste.content is not None:
-                save_result = await self._save_content(
-                    str(paste_id), edit_paste.content
-                )
+                save_result = await self._save_content(str(paste_id), edit_paste.content)
                 if not save_result:
                     return None
                 (
@@ -302,7 +275,7 @@ class PasteService:
                 result.is_compressed = is_compressed
                 result.original_size = original_size
 
-            result.last_updated_at = datetime.now(tz=timezone.utc)
+            result.last_updated_at = datetime.now(tz=UTC)
 
             await session.commit()
             await session.refresh(result)
@@ -334,15 +307,13 @@ class PasteService:
                 .where(
                     PasteEntity.id == paste_id,
                     or_(
-                        PasteEntity.expires_at > datetime.now(tz=timezone.utc),
+                        PasteEntity.expires_at > datetime.now(tz=UTC),
                         PasteEntity.expires_at.is_(None),
                     ),
                 )
                 .limit(1)
             )
-            result: PasteEntity | None = (
-                await session.execute(stmt)
-            ).scalar_one_or_none()
+            result: PasteEntity | None = (await session.execute(stmt)).scalar_one_or_none()
 
             if result is None:
                 return False
@@ -371,9 +342,7 @@ class PasteService:
             await session.commit()
             return True
 
-    async def create_paste(
-            self, paste: CreatePaste, user_data: UserMetaData
-    ) -> PasteResponse:
+    async def create_paste(self, paste: CreatePaste, user_data: UserMetaData) -> PasteResponse:
         if not self.verify_storage_limit():
             raise HTTPException(
                 status_code=500,

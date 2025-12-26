@@ -39,9 +39,9 @@ COPY pyproject.toml uv.lock ./
 # Install dependencies
 # --frozen: Use exact versions from uv.lock (reproducible builds)
 # --no-dev: Exclude development dependencies
-# --extra migrations: Include migrations group (psycopg2-binary)
+# --extra production: Include any production related dependencies (redis, aiocache etc...)
 # --no-cache: Prevent uv cache bloat in image
-RUN uv sync --frozen --no-dev --extra migrations --no-cache
+RUN uv sync --frozen --no-default-groups --extra production --no-cache
 
 # ============================================
 # Stage 3: Runtime - Production Image
@@ -49,7 +49,7 @@ RUN uv sync --frozen --no-dev --extra migrations --no-cache
 FROM base AS runtime
 
 # Copy uv for runtime execution
-COPY --from=ghcr.io/astral-sh/uv:0.5.16 /uv /uvx /usr/local/bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9.18 /uv /uvx /usr/local/bin/
 
 # Copy installed dependencies from builder stage
 # This excludes build tools (gcc, g++, libpq-dev)

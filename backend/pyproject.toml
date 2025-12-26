@@ -1,10 +1,10 @@
 [project]
 name = "backend"
 version = "0.0.1"
-keywords = ["Pastebin", "Simplistic"]
-urls = { github = "https://github.com/TheDeveloperDen/DevBin" }
 description = "DevBins backend"
+keywords = ["Pastebin", "Simplistic"]
 requires-python = ">=3.13"
+urls = { github = "https://github.com/TheDeveloperDen/DevBin" }
 dependencies = [
     "fastapi>=0.124",
     "uvicorn[standard]>=0.30",
@@ -23,26 +23,26 @@ dependencies = [
     "fastapi-cors>=0.0.6",
     "argon2-cffi>=23.1.0",
 ]
+
 [project.optional-dependencies]
-migrations = [
-    "psycopg2-binary",
-]
-storage = [
-    "aioboto3>=12.0.0",  # For S3/MinIO storage backends
-]
+migrations = ["psycopg2-binary"]
+storage = ["aioboto3>=12.0.0"]
 redis = [
-    "redis>=5.0.0",  # For Redis cache and distributed locking
-    "aiocache[redis]>=0.12.3",  # For Redis cache backend
+    "redis>=5.0.0",
+    "aiocache[redis]>=0.12.3",
 ]
-logging = [
-    "structlog>=23.1.0",  # For structured JSON logging
+logging = ["structlog>=23.1.0"]
+metrics = ["prometheus-client>=0.17.0"]
+production = [
+    "aioboto3>=12.0.0",
+    "redis>=5.0.0",
+    "aiocache[redis]>=0.12.3",
+    "structlog>=23.1.0",
+    "prometheus-client>=0.17.0",
 ]
-metrics = [
-    "prometheus-client>=0.17.0",  # For Prometheus metrics and monitoring
-]
-dev = [
-    "ruff>=0.14.9",
-]
+
+[dependency-groups]
+dev = ["ruff>=0.14.9"]
 test = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
@@ -56,15 +56,28 @@ test = [
     "coverage[toml]>=7.4.0",
 ]
 
-[tool.uvicorn]
-factory = false
-
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.uv]
+default-groups = ["dev", "test"]
+
 [tool.setuptools.packages]
 find = { where = ["."], include = ["app*", "files*", "alembic*"] }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --strict-markers --tb=short --cov=app --cov-report=term-missing --cov-report=html"
+markers = [
+    "unit: Unit tests (fast, isolated)",
+    "integration: Integration tests (database, file system)",
+    "security: Security-focused tests",
+]
 
 [tool.coverage.run]
 source = ["app"]
@@ -76,3 +89,23 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
 ]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle errors
+    "F", # pyflakes
+    "W", # pycodestyle warnings
+    "I", # isort
+    "UP", # pyupgrade
+    "B", # bugbear
+    "S", # bandit (security)
+    "SIM", # simplify
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S105", "S106"]
+"/*" = ["B008"]

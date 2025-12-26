@@ -1,5 +1,4 @@
 """Tests for distributed locking implementations."""
-import pytest
 import tempfile
 from pathlib import Path
 
@@ -122,7 +121,7 @@ class TestFileLock:
         with tempfile.TemporaryDirectory() as tmpdir:
             lock = FileLock(lock_dir=tmpdir)
 
-            for i in range(10):
+            for _i in range(10):
                 assert lock.acquire("test-key", timeout=10)
                 lock.touch("test-key")
                 lock.release("test-key")

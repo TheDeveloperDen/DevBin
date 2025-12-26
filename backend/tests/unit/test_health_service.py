@@ -1,7 +1,9 @@
 """Tests for health service with enhanced checks."""
+
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from app.services.health_service import HealthService
@@ -28,10 +30,7 @@ class TestHealthService:
         """Health check should verify storage backend."""
         session_factory = sessionmaker(test_db_engine, class_=AsyncSession, expire_on_commit=False)
         storage_client = LocalStorageClient(base_path=str(temp_file_storage))
-        health_service = HealthService(
-            session=session_factory,
-            storage_client=storage_client
-        )
+        health_service = HealthService(session=session_factory, storage_client=storage_client)
 
         response = await health_service.check()
 
@@ -42,19 +41,13 @@ class TestHealthService:
 
     async def test_health_check_with_cache(self, test_db_engine):
         """Health check should verify cache backend."""
-        from app.utils.LRUMemoryCache import LRUMemoryCache
         from aiocache.serializers import PickleSerializer
 
+        from app.utils.LRUMemoryCache import LRUMemoryCache
+
         session_factory = sessionmaker(test_db_engine, class_=AsyncSession, expire_on_commit=False)
-        cache_client = LRUMemoryCache(
-            serializer=PickleSerializer(),
-            max_size=100,
-            ttl=10
-        )
-        health_service = HealthService(
-            session=session_factory,
-            cache_client=cache_client
-        )
+        cache_client = LRUMemoryCache(serializer=PickleSerializer(), max_size=100, ttl=10)
+        health_service = HealthService(session=session_factory, cache_client=cache_client)
 
         response = await health_service.check()
 
@@ -75,13 +68,11 @@ class TestHealthService:
 
         health_service = HealthService(session=session_factory)
 
-        # We need to mock the actual execution
-        original_check = health_service.check
-
         async def mock_check():
             status = "unhealthy"
             dependencies = {"database": "error: Exception"}
             from fastapi.responses import ORJSONResponse
+
             return ORJSONResponse(
                 {"status": status, "dependencies": dependencies},
                 status_code=503,
@@ -107,21 +98,16 @@ class TestHealthService:
 
     async def test_health_check_all_dependencies(self, test_db_engine, temp_file_storage):
         """Health check should verify all dependencies when provided."""
-        from app.utils.LRUMemoryCache import LRUMemoryCache
         from aiocache.serializers import PickleSerializer
+
+        from app.utils.LRUMemoryCache import LRUMemoryCache
 
         session_factory = sessionmaker(test_db_engine, class_=AsyncSession, expire_on_commit=False)
         storage_client = LocalStorageClient(base_path=str(temp_file_storage))
-        cache_client = LRUMemoryCache(
-            serializer=PickleSerializer(),
-            max_size=100,
-            ttl=10
-        )
+        cache_client = LRUMemoryCache(serializer=PickleSerializer(), max_size=100, ttl=10)
 
         health_service = HealthService(
-            session=session_factory,
-            storage_client=storage_client,
-            cache_client=cache_client
+            session=session_factory, storage_client=storage_client, cache_client=cache_client
         )
 
         response = await health_service.check()

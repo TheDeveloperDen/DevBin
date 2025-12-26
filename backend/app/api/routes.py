@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import logging
+
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -16,14 +17,14 @@ from app.services.health_service import HealthService
 
 router = APIRouter()
 
+logger = logging.getLogger(__name__)
+
 
 # Metrics authentication
 metrics_security = HTTPBearer(auto_error=False, description="Metrics access token")
 
 
-def verify_metrics_token(
-    credentials: HTTPAuthorizationCredentials | None = Depends(metrics_security)
-) -> None:
+def verify_metrics_token(credentials: HTTPAuthorizationCredentials | None = Depends(metrics_security)) -> None:
     """
     Verify Bearer token for metrics endpoint.
 
@@ -34,8 +35,11 @@ def verify_metrics_token(
         UnauthorizedError: If token is missing or invalid when authentication is required
     """
     # If no token configured, allow public access
-    if not config.METRICS_TOKEN:
+    if not config.METRICS_TOKEN and config.ENVIRONMENT != "prod":
         return
+    elif not config.METRICS_TOKEN:
+        logger.warning("No METRICS_TOKEN configured and ENVIRONMENT is prod")
+        raise UnauthorizedError("Invalid metrics token")
 
     # Token is configured, authentication required
     if not credentials:
@@ -50,8 +54,8 @@ def verify_metrics_token(
 @limiter.limit("60/minute")
 @inject
 async def health(
-        request: Request,
-        health_service: HealthService = Depends(Provide[Container.health_service]),
+    request: Request,
+    health_service: HealthService = Depends(Provide[Container.health_service]),
 ):
     return await health_service.check()
 
@@ -60,22 +64,22 @@ async def health(
 @limiter.limit("60/minute")
 @inject
 async def ready(
-        request: Request,
-        health_service: HealthService = Depends(Provide[Container.health_service]),
+    request: Request,
+    health_service: HealthService = Depends(Provide[Container.health_service]),
 ):
     """Readiness endpoint for load balancers."""
     return await health_service.ready()
 
 
 @router.get("/metrics")
-async def metrics(
-    _: None = Depends(verify_metrics_token)
-):
+async def metrics(_: None = Depends(verify_metrics_token)):
     """
     Prometheus metrics endpoint.
 
     Requires Bearer token authentication if APP_METRICS_TOKEN is configured.
     """
+    from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+
     return Response(
         content=generate_latest(),
         media_type=CONTENT_TYPE_LATEST,

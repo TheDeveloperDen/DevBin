@@ -1,6 +1,7 @@
 """Tests for storage abstraction layer."""
-import pytest
 from pathlib import Path
+
+import pytest
 
 from app.storage.local_storage import LocalStorageClient
 

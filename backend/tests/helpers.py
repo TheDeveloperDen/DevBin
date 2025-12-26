@@ -1,6 +1,6 @@
 """Test helper functions and assertion utilities."""
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from httpx import Response
 from sqlalchemy import select
@@ -82,8 +82,8 @@ def assert_paste_file_not_exists(storage_path: Path, paste_id: str):
 def assert_error_response(
     response: Response,
     status_code: int,
-    error_type: Optional[str] = None,
-    error_message_contains: Optional[str] = None
+    error_type: str | None = None,
+    error_message_contains: str | None = None
 ):
     """
     Standardized error response validation.
@@ -120,7 +120,7 @@ def assert_error_response(
             f"Expected error message to contain '{error_message_contains}', got: {data}"
 
 
-def assert_successful_paste_response(response: Response) -> Dict[str, Any]:
+def assert_successful_paste_response(response: Response) -> dict[str, Any]:
     """
     Verify a successful paste creation/retrieval response.
 
@@ -146,7 +146,7 @@ def assert_successful_paste_response(response: Response) -> Dict[str, Any]:
     return data
 
 
-def assert_tokens_valid(paste_data: Dict[str, Any]):
+def assert_tokens_valid(paste_data: dict[str, Any]):
     """
     Verify paste tokens are present and properly formatted.
 
@@ -193,7 +193,7 @@ async def assert_paste_content_matches(
         AssertionError: If content doesn't match
     """
     # Check database
-    paste = await assert_paste_in_db(session, paste_id)
+    await assert_paste_in_db(session, paste_id)
 
     # Check file
     paste_file = storage_path / f"{paste_id}.txt"

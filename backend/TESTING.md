@@ -7,7 +7,7 @@ This guide explains how to run tests locally and in CI/CD.
 ### 1. Install Test Dependencies
 
 ```bash
-uv sync --extra test
+uv sync --group test
 ```
 
 ### 2. Start Test Database
@@ -52,7 +52,7 @@ tests/
 └── security/         # Security-focused tests
 ```
 
-## Local Development
+## Local Development on tests
 
 ### Managing Test Database
 

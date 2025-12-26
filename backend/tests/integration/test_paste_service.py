@@ -1,7 +1,8 @@
 """Integration tests for PasteService."""
+
 import hashlib
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -21,23 +22,19 @@ from app.db.models import PasteEntity
 from app.services.cleanup_service import CleanupService
 from app.services.paste_service import PasteService
 from app.storage.local_storage import LocalStorageClient
+from app.utils.token_utils import hash_token
 from tests.constants import (
+    STORAGE_MOCK_FREE,
     STORAGE_MOCK_TOTAL,
     STORAGE_MOCK_USED,
-    STORAGE_MOCK_FREE,
     TIME_TOLERANCE_SECONDS,
 )
-from app.utils.token_utils import hash_token
 
 
 @pytest.fixture
-async def paste_service(
-    test_db_engine, temp_file_storage
-) -> PasteService:
+async def paste_service(test_db_engine, temp_file_storage) -> PasteService:
     """Create PasteService instance with test dependencies."""
-    session_maker = sessionmaker(
-        test_db_engine, class_=AsyncSession, expire_on_commit=False
-    )
+    session_maker = sessionmaker(test_db_engine, class_=AsyncSession, expire_on_commit=False)
     cleanup_service = MagicMock(spec=CleanupService)
     storage_client = LocalStorageClient(base_path=str(temp_file_storage))
     return PasteService(
@@ -54,9 +51,7 @@ def sample_user_metadata() -> UserMetaData:
 
 
 @pytest.fixture
-async def paste_with_file(
-    paste_service: PasteService, sample_user_metadata: UserMetaData
-):
+async def paste_with_file(paste_service: PasteService, sample_user_metadata: UserMetaData):
     """Create a paste with actual file on disk."""
     paste_dto = CreatePaste(
         title="Test Paste",
@@ -75,7 +70,7 @@ async def expired_paste(
 ):
     """Create an expired paste for testing."""
     # Create paste that's already expired - bypass CreatePaste validation
-    expired_time = datetime.now(tz=timezone.utc) - timedelta(hours=1)
+    expired_time = datetime.now(tz=UTC) - timedelta(hours=1)
 
     # Create it directly in the database to bypass expiration validation
     paste_id = uuid.uuid4()
@@ -114,6 +109,7 @@ async def expired_paste(
 @pytest.fixture
 def mock_storage_full(monkeypatch):
     """Mock disk_usage to simulate full storage."""
+
     def mock_disk_usage(path):
         # Return: total, used, free (in bytes)
         # Free space less than 1MB (MIN_STORAGE_MB default in test config)
@@ -200,7 +196,7 @@ class TestPasteServiceCreate:
         sample_user_metadata: UserMetaData,
     ):
         """Create paste with expiration time."""
-        expires_at = datetime.now(tz=timezone.utc) + timedelta(hours=24)
+        expires_at = datetime.now(tz=UTC) + timedelta(hours=24)
         paste_dto = CreatePaste(
             title="Expiring Paste",
             content="This will expire",
@@ -292,12 +288,12 @@ class TestPasteServiceCreate:
             session = original_maker()
             async with session:
                 # Override commit to raise error
-                original_commit = session.commit
 
                 async def failing_commit():
                     # Capture the paste ID before failing
                     nonlocal captured_paste_id
                     from sqlalchemy import select
+
                     result = await session.execute(select(PasteEntity))
                     pastes = result.scalars().all()
                     if pastes:
@@ -308,7 +304,7 @@ class TestPasteServiceCreate:
                 session.commit = failing_commit
                 yield session
 
-        with patch.object(paste_service, 'session_maker') as mock_maker:
+        with patch.object(paste_service, "session_maker") as mock_maker:
             mock_maker.return_value.__aenter__ = lambda self: mock_session_context().__aenter__()
             mock_maker.return_value.__aexit__ = lambda self, *args: mock_session_context().__aexit__(*args)
 
@@ -323,22 +319,20 @@ class TestPasteServiceCreate:
         # If we captured the paste ID, verify that specific file doesn't exist
         if captured_paste_id:
             potential_file_path = temp_file_storage / f"{captured_paste_id}.txt"
-            assert not potential_file_path.exists(), \
+            assert not potential_file_path.exists(), (
                 f"File {potential_file_path} should have been deleted after DB error"
+            )
 
         # Also verify no unexpected files were left behind
         # (Should be 0, or only files from other tests)
-        assert len(test_files) == 0, \
-            f"Expected no orphaned files, but found: {[f.name for f in test_files]}"
+        assert len(test_files) == 0, f"Expected no orphaned files, but found: {[f.name for f in test_files]}"
 
 
 @pytest.mark.integration
 class TestPasteServiceGet:
     """Tests for paste retrieval operations."""
 
-    async def test_get_paste_by_id_returns_content_from_file(
-        self, paste_service: PasteService, paste_with_file
-    ):
+    async def test_get_paste_by_id_returns_content_from_file(self, paste_service: PasteService, paste_with_file):
         """Get paste should return content from file system."""
         paste_id = paste_with_file.id
 
@@ -349,9 +343,7 @@ class TestPasteServiceGet:
         assert result.content == "Test content for file"
         assert result.title == "Test Paste"
 
-    async def test_get_paste_by_id_returns_none_for_expired_paste(
-        self, paste_service: PasteService, expired_paste
-    ):
+    async def test_get_paste_by_id_returns_none_for_expired_paste(self, paste_service: PasteService, expired_paste):
         """Get paste should return None for expired pastes."""
         paste_id = expired_paste["id"]
 
@@ -359,9 +351,7 @@ class TestPasteServiceGet:
 
         assert result is None
 
-    async def test_get_paste_by_id_returns_none_for_nonexistent_paste(
-        self, paste_service: PasteService
-    ):
+    async def test_get_paste_by_id_returns_none_for_nonexistent_paste(self, paste_service: PasteService):
         """Get paste should return None for non-existent paste."""
         nonexistent_id = uuid.uuid4()
 
@@ -394,15 +384,11 @@ class TestPasteServiceGet:
 class TestPasteServiceEdit:
     """Tests for paste editing operations."""
 
-    async def test_edit_paste_with_valid_hashed_token(
-        self, paste_service: PasteService, paste_with_file
-    ):
+    async def test_edit_paste_with_valid_hashed_token(self, paste_service: PasteService, paste_with_file):
         """Edit paste should succeed with valid hashed token."""
         edit_dto = EditPaste(title="Updated Title")
 
-        result = await paste_service.edit_paste(
-            paste_with_file.id, edit_dto, paste_with_file.edit_token
-        )
+        result = await paste_service.edit_paste(paste_with_file.id, edit_dto, paste_with_file.edit_token)
 
         assert result is not None
         assert result.title == "Updated Title"
@@ -438,9 +424,7 @@ class TestPasteServiceEdit:
             await session.commit()
 
         edit_dto = EditPaste(title="Updated via Legacy Token")
-        result = await paste_service.edit_paste(
-            paste_id, edit_dto, plaintext_token
-        )
+        result = await paste_service.edit_paste(paste_id, edit_dto, plaintext_token)
 
         assert result is not None
         assert result.title == "Updated via Legacy Token"
@@ -476,9 +460,7 @@ class TestPasteServiceEdit:
             await session.commit()
 
         # Edit with plaintext token
-        await paste_service.edit_paste(
-            paste_id, EditPaste(title="Updated"), plaintext_token
-        )
+        await paste_service.edit_paste(paste_id, EditPaste(title="Updated"), plaintext_token)
 
         # Verify token was upgraded to hashed
         async with paste_service.session_maker() as session:
@@ -486,16 +468,12 @@ class TestPasteServiceEdit:
             db_paste = (await session.execute(stmt)).scalar_one()
             assert db_paste.edit_token.startswith("$argon2")
 
-    async def test_edit_paste_updates_only_provided_fields(
-        self, paste_service: PasteService, paste_with_file
-    ):
+    async def test_edit_paste_updates_only_provided_fields(self, paste_service: PasteService, paste_with_file):
         """Edit paste should only update fields that are provided."""
         original_content = paste_with_file.content
         edit_dto = EditPaste(title="New Title Only")
 
-        result = await paste_service.edit_paste(
-            paste_with_file.id, edit_dto, paste_with_file.edit_token
-        )
+        result = await paste_service.edit_paste(paste_with_file.id, edit_dto, paste_with_file.edit_token)
 
         assert result is not None
         assert result.title == "New Title Only"
@@ -510,9 +488,7 @@ class TestPasteServiceEdit:
         """Edit paste with new content should update file."""
         edit_dto = EditPaste(content="Updated content here")
 
-        result = await paste_service.edit_paste(
-            paste_with_file.id, edit_dto, paste_with_file.edit_token
-        )
+        result = await paste_service.edit_paste(paste_with_file.id, edit_dto, paste_with_file.edit_token)
 
         assert result is not None
         assert result.content == "Updated content here"
@@ -525,57 +501,41 @@ class TestPasteServiceEdit:
             assert file_path.read_text() == "Updated content here"
             assert db_paste.content_size == len("Updated content here")
 
-    async def test_edit_paste_updates_language(
-        self, paste_service: PasteService, paste_with_file
-    ):
+    async def test_edit_paste_updates_language(self, paste_service: PasteService, paste_with_file):
         """Edit paste should update content language."""
         # Test with valid enum value (only plain_text exists currently)
         edit_dto = EditPaste(content_language=PasteContentLanguage.plain_text)
 
-        result = await paste_service.edit_paste(
-            paste_with_file.id, edit_dto, paste_with_file.edit_token
-        )
+        result = await paste_service.edit_paste(paste_with_file.id, edit_dto, paste_with_file.edit_token)
 
         assert result is not None
         assert result.content_language == PasteContentLanguage.plain_text
 
-    async def test_edit_paste_updates_expiration(
-        self, paste_service: PasteService, paste_with_file
-    ):
+    async def test_edit_paste_updates_expiration(self, paste_service: PasteService, paste_with_file):
         """Edit paste should update expiration time."""
-        new_expiration = datetime.now(tz=timezone.utc) + timedelta(days=7)
+        new_expiration = datetime.now(tz=UTC) + timedelta(days=7)
         edit_dto = EditPaste(expires_at=new_expiration)
 
-        result = await paste_service.edit_paste(
-            paste_with_file.id, edit_dto, paste_with_file.edit_token
-        )
+        result = await paste_service.edit_paste(paste_with_file.id, edit_dto, paste_with_file.edit_token)
 
         assert result is not None
         assert result.expires_at is not None
         assert abs((result.expires_at - new_expiration).total_seconds()) < TIME_TOLERANCE_SECONDS
 
-    async def test_edit_paste_fails_with_invalid_token(
-        self, paste_service: PasteService, paste_with_file
-    ):
+    async def test_edit_paste_fails_with_invalid_token(self, paste_service: PasteService, paste_with_file):
         """Edit paste should fail with invalid token."""
         edit_dto = EditPaste(title="Should Fail")
         invalid_token = "invalid_token_12345"
 
-        result = await paste_service.edit_paste(
-            paste_with_file.id, edit_dto, invalid_token
-        )
+        result = await paste_service.edit_paste(paste_with_file.id, edit_dto, invalid_token)
 
         assert result is None
 
-    async def test_edit_paste_fails_for_expired_paste(
-        self, paste_service: PasteService, expired_paste
-    ):
+    async def test_edit_paste_fails_for_expired_paste(self, paste_service: PasteService, expired_paste):
         """Edit paste should fail for expired pastes."""
         edit_dto = EditPaste(title="Should Fail")
 
-        result = await paste_service.edit_paste(
-            expired_paste["id"], edit_dto, expired_paste["edit_token"]
-        )
+        result = await paste_service.edit_paste(expired_paste["id"], edit_dto, expired_paste["edit_token"])
 
         assert result is None
 
@@ -597,11 +557,9 @@ class TestPasteServiceDelete:
         async with paste_service.session_maker() as session:
             stmt = select(PasteEntity).where(PasteEntity.id == paste_id)
             db_paste = (await session.execute(stmt)).scalar_one()
-            file_path = temp_file_storage / db_paste.content_path
+            temp_file_storage / db_paste.content_path
 
-        success = await paste_service.delete_paste(
-            paste_id, paste_with_file.delete_token
-        )
+        success = await paste_service.delete_paste(paste_id, paste_with_file.delete_token)
 
         assert success is True
 
@@ -614,13 +572,9 @@ class TestPasteServiceDelete:
         # Note: File removal uses _remove_file which catches exceptions,
         # so we can't reliably test file deletion in this simple case
 
-    async def test_delete_paste_with_valid_hashed_token(
-        self, paste_service: PasteService, paste_with_file
-    ):
+    async def test_delete_paste_with_valid_hashed_token(self, paste_service: PasteService, paste_with_file):
         """Delete paste should succeed with valid hashed token."""
-        success = await paste_service.delete_paste(
-            paste_with_file.id, paste_with_file.delete_token
-        )
+        success = await paste_service.delete_paste(paste_with_file.id, paste_with_file.delete_token)
 
         assert success is True
 
@@ -658,15 +612,11 @@ class TestPasteServiceDelete:
 
         assert success is True
 
-    async def test_delete_paste_fails_with_invalid_token(
-        self, paste_service: PasteService, paste_with_file
-    ):
+    async def test_delete_paste_fails_with_invalid_token(self, paste_service: PasteService, paste_with_file):
         """Delete paste should fail with invalid token."""
         invalid_token = "wrong_token_12345"
 
-        success = await paste_service.delete_paste(
-            paste_with_file.id, invalid_token
-        )
+        success = await paste_service.delete_paste(paste_with_file.id, invalid_token)
 
         assert success is False
 
@@ -684,19 +634,13 @@ class TestPasteServiceDelete:
             file_path = temp_file_storage / db_paste.content_path
             file_path.unlink()
 
-        success = await paste_service.delete_paste(
-            paste_with_file.id, paste_with_file.delete_token
-        )
+        success = await paste_service.delete_paste(paste_with_file.id, paste_with_file.delete_token)
 
         assert success is True
 
-    async def test_delete_paste_fails_for_expired_paste(
-        self, paste_service: PasteService, expired_paste
-    ):
+    async def test_delete_paste_fails_for_expired_paste(self, paste_service: PasteService, expired_paste):
         """Delete paste should fail for expired pastes."""
-        success = await paste_service.delete_paste(
-            expired_paste["id"], expired_paste["delete_token"]
-        )
+        success = await paste_service.delete_paste(expired_paste["id"], expired_paste["delete_token"])
 
         assert success is False
 
@@ -705,9 +649,7 @@ class TestPasteServiceDelete:
 class TestPasteServiceLegacy:
     """Tests for legacy paste retrieval."""
 
-    async def test_get_legacy_paste_by_name_returns_content(
-        self, paste_service: PasteService, temp_file_storage: Path
-    ):
+    async def test_get_legacy_paste_by_name_returns_content(self, paste_service: PasteService, temp_file_storage: Path):
         """Get legacy paste should return content from hastebin directory."""
         # Create hastebin directory and file
         hastebin_dir = temp_file_storage / "hastebin"
@@ -723,9 +665,7 @@ class TestPasteServiceLegacy:
         assert result is not None
         assert result.content == "Legacy hastebin content"
 
-    async def test_get_legacy_paste_returns_none_when_directory_missing(
-        self, paste_service: PasteService
-    ):
+    async def test_get_legacy_paste_returns_none_when_directory_missing(self, paste_service: PasteService):
         """Get legacy paste should return None when hastebin directory doesn't exist."""
         result = await paste_service.get_legacy_paste_by_name("anypaste")
 
@@ -803,7 +743,7 @@ class TestPasteServiceCompression:
 
             assert db_paste.is_compressed is False
             assert db_paste.original_size is None
-            assert db_paste.content_size == len(small_content.encode('utf-8'))
+            assert db_paste.content_size == len(small_content.encode("utf-8"))
 
     async def test_get_compressed_paste_returns_original_content(
         self,
@@ -851,7 +791,7 @@ class TestPasteServiceCompression:
                 content_language="plain_text",
                 creator_ip="127.0.0.1",
                 creator_user_agent="Test",
-                content_size=len(legacy_content.encode('utf-8')),
+                content_size=len(legacy_content.encode("utf-8")),
                 is_compressed=False,
                 original_size=None,
                 edit_token=hash_token("edit123"),

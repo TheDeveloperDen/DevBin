@@ -1,17 +1,18 @@
 """Content compression utilities for paste storage."""
+
 import gzip
 import logging
-from typing import Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class CompressionError(Exception):
     """Raised when compression/decompression fails."""
+
     pass
 
 
-def compress_content(content: str, compression_level: int = 6) -> Tuple[bytes, int]:
+def compress_content(content: str, compression_level: int = 6) -> tuple[bytes, int]:
     """
     Compress content using gzip.
 
@@ -26,20 +27,20 @@ def compress_content(content: str, compression_level: int = 6) -> Tuple[bytes, i
         CompressionError: If compression fails
     """
     try:
-        content_bytes = content.encode('utf-8')
+        content_bytes = content.encode("utf-8")
         original_size = len(content_bytes)
 
         compressed = gzip.compress(
             content_bytes,
             compresslevel=compression_level,
-            mtime=0  # Deterministic output
+            mtime=0,  # Deterministic output
         )
 
         logger.debug(
             "Compressed %d bytes to %d bytes (%.1f%% reduction)",
             original_size,
             len(compressed),
-            100 * (1 - len(compressed) / original_size) if original_size > 0 else 0
+            100 * (1 - len(compressed) / original_size) if original_size > 0 else 0,
         )
 
         return compressed, original_size
@@ -64,7 +65,7 @@ def decompress_content(compressed_data: bytes) -> str:
     """
     try:
         decompressed_bytes = gzip.decompress(compressed_data)
-        return decompressed_bytes.decode('utf-8')
+        return decompressed_bytes.decode("utf-8")
 
     except gzip.BadGzipFile as exc:
         logger.error("Invalid gzip data: %s", exc)
@@ -88,5 +89,5 @@ def should_compress(content: str, threshold: int) -> bool:
     Returns:
         True if content should be compressed
     """
-    content_size = len(content.encode('utf-8'))
+    content_size = len(content.encode("utf-8"))
     return content_size >= threshold

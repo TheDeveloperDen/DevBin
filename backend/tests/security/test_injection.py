@@ -1,4 +1,5 @@
 """Security tests for SQL injection and code injection prevention."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -8,9 +9,7 @@ from httpx import AsyncClient
 class TestSQLInjectionPrevention:
     """Tests to ensure SQL injection attacks are prevented."""
 
-    async def test_paste_id_sql_injection_attempt(
-            self, test_client: AsyncClient, bypass_headers
-    ):
+    async def test_paste_id_sql_injection_attempt(self, test_client: AsyncClient, bypass_headers):
         """GET /pastes/{id} should safely handle SQL injection attempts in ID."""
         # Various SQL injection payloads
         sql_injection_payloads = [
@@ -35,9 +34,7 @@ class TestSQLInjectionPrevention:
             assert "syntax error" not in response_str
             assert "database" not in response_str
 
-    async def test_paste_content_sql_injection_attempt(
-            self, test_client: AsyncClient, bypass_headers
-    ):
+    async def test_paste_content_sql_injection_attempt(self, test_client: AsyncClient, bypass_headers):
         """POST /pastes should safely handle SQL injection in content fields."""
         sql_payload = "'; DROP TABLE pastes; --"
 
@@ -62,9 +59,7 @@ class TestSQLInjectionPrevention:
         assert retrieved_data["title"] == sql_payload
         assert retrieved_data["content"] == sql_payload
 
-    async def test_legacy_paste_name_injection_attempt(
-            self, test_client: AsyncClient, bypass_headers
-    ):
+    async def test_legacy_paste_name_injection_attempt(self, test_client: AsyncClient, bypass_headers):
         """GET /pastes/legacy/{name} should prevent injection via paste name."""
         # Path traversal + SQL injection
         malicious_names = [
@@ -86,9 +81,7 @@ class TestSQLInjectionPrevention:
 class TestPathTraversalPrevention:
     """Tests to ensure path traversal attacks are prevented."""
 
-    async def test_paste_id_path_traversal_attempt(
-            self, test_client: AsyncClient, bypass_headers
-    ):
+    async def test_paste_id_path_traversal_attempt(self, test_client: AsyncClient, bypass_headers):
         """Paste ID should not allow path traversal."""
         path_traversal_payloads = [
             "../../../etc/passwd",

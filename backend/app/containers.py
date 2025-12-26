@@ -1,20 +1,20 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from dependency_injector import containers, providers
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.config import Config, get_config
-from app.storage import StorageClient
-from app.storage.local_storage import LocalStorageClient
-from app.storage.s3_storage import S3StorageClient
-from app.storage.minio_storage import MinIOStorageClient
 from app.locks import DistributedLock
 from app.locks.file_lock import FileLock
 from app.locks.redis_lock import RedisLock
+from app.storage import StorageClient
+from app.storage.local_storage import LocalStorageClient
+from app.storage.minio_storage import MinIOStorageClient
+from app.storage.s3_storage import S3StorageClient
 from app.utils.LRUMemoryCache import LRUMemoryCache
 
 
@@ -105,6 +105,7 @@ def _create_distributed_lock(config: Config) -> DistributedLock:
 def _create_cache(config: Config):
     """Create cache based on configuration with fallback to memory cache."""
     import logging
+
     from aiocache.serializers import PickleSerializer
 
     logger = logging.getLogger(__name__)

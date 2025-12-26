@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   devbin_test_db:
     image: postgres:16

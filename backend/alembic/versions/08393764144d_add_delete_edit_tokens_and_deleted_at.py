@@ -1,20 +1,21 @@
-"""Add Delete, Edit tokens and deleted at 
+"""Add Delete, Edit tokens and deleted at
 
 Revision ID: 08393764144d
 Revises: 7c45e2617d61
 Create Date: 2025-12-17 22:00:02.736745
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '08393764144d'
-down_revision: Union[str, Sequence[str], None] = '7c45e2617d61'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = '7c45e2617d61'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

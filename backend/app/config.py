@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from pydantic import Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings
 
-from app.utils.ip import resolve_hostname, validate_ip_address
+from app.utils.ip import TrustedHost, parse_ip_or_network, resolve_hostname, validate_ip_address
 
 # Load .env file if it exists
 load_dotenv()
@@ -14,9 +14,7 @@ load_dotenv()
 class Config(BaseSettings):
     # Environment
     ENVIRONMENT: Literal["dev", "staging", "prod"] = Field(
-        default="dev",
-        validation_alias="APP_ENVIRONMENT",
-        description="Application environment (dev, staging, prod)"
+        default="dev", validation_alias="APP_ENVIRONMENT", description="Application environment (dev, staging, prod)"
     )
 
     PORT: int = Field(default=8000, validation_alias="APP_PORT")
@@ -30,18 +28,14 @@ class Config(BaseSettings):
     SQLALCHEMY_ECHO: bool = Field(default=False, validation_alias="APP_SQLALCHEMY_ECHO")
 
     # Paste
-    MAX_CONTENT_LENGTH: int = Field(
-        default=10000, validation_alias="APP_MAX_CONTENT_LENGTH"
-    )
-    BASE_FOLDER_PATH: str = Field(
-        default="./files", validation_alias="APP_BASE_FOLDER_PATH"
-    )
+    MAX_CONTENT_LENGTH: int = Field(default=10000, validation_alias="APP_MAX_CONTENT_LENGTH")
+    BASE_FOLDER_PATH: str = Field(default="./files", validation_alias="APP_BASE_FOLDER_PATH")
     WORKERS: int | Literal[True] = Field(default=1, validation_alias="APP_WORKERS")
     BYPASS_TOKEN: str | None = Field(default=None, validation_alias="APP_BYPASS_TOKEN")
     METRICS_TOKEN: str | None = Field(
         default=None,
         validation_alias="APP_METRICS_TOKEN",
-        description="Bearer token for Prometheus metrics endpoint authentication"
+        description="Bearer token for Prometheus metrics endpoint authentication",
     )
 
     ALLOW_CORS_WILDCARD: bool = Field(
@@ -60,48 +54,28 @@ class Config(BaseSettings):
 
     # Cache backend configuration
     CACHE_TYPE: Literal["memory", "redis"] = Field(
-        default="memory",
-        validation_alias="APP_CACHE_TYPE",
-        description="Cache backend type (memory, redis)"
+        default="memory", validation_alias="APP_CACHE_TYPE", description="Cache backend type (memory, redis)"
     )
-    REDIS_HOST: str = Field(
-        default="localhost",
-        validation_alias="APP_REDIS_HOST",
-        description="Redis server host"
-    )
-    REDIS_PORT: int = Field(
-        default=6379,
-        validation_alias="APP_REDIS_PORT",
-        description="Redis server port"
-    )
-    REDIS_DB: int = Field(
-        default=0,
-        validation_alias="APP_REDIS_DB",
-        description="Redis database number"
-    )
+    REDIS_HOST: str = Field(default="localhost", validation_alias="APP_REDIS_HOST", description="Redis server host")
+    REDIS_PORT: int = Field(default=6379, validation_alias="APP_REDIS_PORT", description="Redis server port")
+    REDIS_DB: int = Field(default=0, validation_alias="APP_REDIS_DB", description="Redis database number")
     REDIS_PASSWORD: str | None = Field(
-        default=None,
-        validation_alias="APP_REDIS_PASSWORD",
-        description="Redis password (optional)"
+        default=None, validation_alias="APP_REDIS_PASSWORD", description="Redis password (optional)"
     )
 
     # Lock backend configuration
     LOCK_TYPE: Literal["file", "redis"] = Field(
-        default="file",
-        validation_alias="APP_LOCK_TYPE",
-        description="Lock backend type (file, redis)"
+        default="file", validation_alias="APP_LOCK_TYPE", description="Lock backend type (file, redis)"
     )
 
     # Logging configuration
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
-        default="INFO",
-        validation_alias="APP_LOG_LEVEL",
-        description="Logging level"
+        default="INFO", validation_alias="APP_LOG_LEVEL", description="Logging level"
     )
     LOG_FORMAT: Literal["text", "json"] = Field(
         default="text",
         validation_alias="APP_LOG_FORMAT",
-        description="Log output format (text for human-readable, json for structured)"
+        description="Log output format (text for human-readable, json for structured)",
     )
 
     MIN_STORAGE_MB: int = Field(
@@ -114,69 +88,37 @@ class Config(BaseSettings):
     COMPRESSION_ENABLED: bool = Field(
         default=True,
         validation_alias="APP_COMPRESSION_ENABLED",
-        description="Enable gzip compression for paste content"
+        description="Enable gzip compression for paste content",
     )
     COMPRESSION_THRESHOLD_BYTES: int = Field(
         default=2048,
         validation_alias="APP_COMPRESSION_THRESHOLD_BYTES",
-        description="Minimum content size in bytes to trigger compression (2KB+ shows 30-40% compression ratio)"
+        description="Minimum content size in bytes to trigger compression (2KB+ shows 30-40% compression ratio)",
     )
     COMPRESSION_LEVEL: int = Field(
-        default=6,
-        validation_alias="APP_COMPRESSION_LEVEL",
-        description="Gzip compression level (1-9, 6=balanced)"
+        default=6, validation_alias="APP_COMPRESSION_LEVEL", description="Gzip compression level (1-9, 6=balanced)"
     )
 
     # Storage settings
     STORAGE_TYPE: Literal["local", "s3", "minio"] = Field(
-        default="local",
-        validation_alias="APP_STORAGE_TYPE",
-        description="Storage backend type (local, s3, minio)"
+        default="local", validation_alias="APP_STORAGE_TYPE", description="Storage backend type (local, s3, minio)"
     )
-    S3_BUCKET_NAME: str = Field(
-        default="",
-        validation_alias="APP_S3_BUCKET_NAME",
-        description="S3 bucket name"
-    )
-    S3_REGION: str = Field(
-        default="us-east-1",
-        validation_alias="APP_S3_REGION",
-        description="AWS region for S3"
-    )
-    S3_ACCESS_KEY: str = Field(
-        default="",
-        validation_alias="APP_S3_ACCESS_KEY",
-        description="S3 access key ID"
-    )
-    S3_SECRET_KEY: str = Field(
-        default="",
-        validation_alias="APP_S3_SECRET_KEY",
-        description="S3 secret access key"
-    )
+    S3_BUCKET_NAME: str = Field(default="", validation_alias="APP_S3_BUCKET_NAME", description="S3 bucket name")
+    S3_REGION: str = Field(default="us-east-1", validation_alias="APP_S3_REGION", description="AWS region for S3")
+    S3_ACCESS_KEY: str = Field(default="", validation_alias="APP_S3_ACCESS_KEY", description="S3 access key ID")
+    S3_SECRET_KEY: str = Field(default="", validation_alias="APP_S3_SECRET_KEY", description="S3 secret access key")
     S3_ENDPOINT_URL: str | None = Field(
         default=None,
         validation_alias="APP_S3_ENDPOINT_URL",
-        description="Custom S3 endpoint URL (for S3-compatible services)"
+        description="Custom S3 endpoint URL (for S3-compatible services)",
     )
     MINIO_ENDPOINT: str = Field(
-        default="",
-        validation_alias="APP_MINIO_ENDPOINT",
-        description="MinIO server endpoint (e.g., 'minio:9000')"
+        default="", validation_alias="APP_MINIO_ENDPOINT", description="MinIO server endpoint (e.g., 'minio:9000')"
     )
-    MINIO_ACCESS_KEY: str = Field(
-        default="",
-        validation_alias="APP_MINIO_ACCESS_KEY",
-        description="MinIO access key"
-    )
-    MINIO_SECRET_KEY: str = Field(
-        default="",
-        validation_alias="APP_MINIO_SECRET_KEY",
-        description="MinIO secret key"
-    )
+    MINIO_ACCESS_KEY: str = Field(default="", validation_alias="APP_MINIO_ACCESS_KEY", description="MinIO access key")
+    MINIO_SECRET_KEY: str = Field(default="", validation_alias="APP_MINIO_SECRET_KEY", description="MinIO secret key")
     MINIO_SECURE: bool = Field(
-        default=True,
-        validation_alias="APP_MINIO_SECURE",
-        description="Use HTTPS for MinIO connection"
+        default=True, validation_alias="APP_MINIO_SECURE", description="Use HTTPS for MinIO connection"
     )
 
     KEEP_DELETED_PASTES_TIME_HOURS: int = Field(
@@ -188,7 +130,7 @@ class Config(BaseSettings):
     TRUSTED_HOSTS: list[str] = Field(
         default=["127.0.0.1"],
         validation_alias="APP_TRUSTED_HOSTS",
-        description="Trusted hosts where X-Forwarded-For header is to be trusted",
+        description="Trusted hosts/networks for X-Forwarded-For (supports CIDR: 10.0.0.0/8, 172.16.0.0/12)",
     )
 
     RELOAD: bool = Field(default=False, validation_alias="APP_RELOAD")
@@ -222,16 +164,20 @@ class Config(BaseSettings):
         return db_url
 
     @field_validator("TRUSTED_HOSTS", mode="after")
-    def verify_trusted_hosts(cls, hosts: list[str]) -> list[str]:
-        validated_hosts = []
+    def verify_trusted_hosts(cls, hosts: list[str]) -> list[TrustedHost]:
+        validated_hosts: list[TrustedHost] = []
         for host in hosts:
-            validated_ip = validate_ip_address(host)
-            if validated_ip:
-                validated_hosts.append(validated_ip)
+            # Try parsing as IP or network (CIDR notation)
+            parsed = parse_ip_or_network(host)
+            if parsed:
+                validated_hosts.append(parsed)
             else:
-                validated_host = resolve_hostname(host)
-                if validated_host is not None:
-                    validated_hosts.append(validated_host)
+                # Try resolving as hostname
+                resolved = resolve_hostname(host)
+                if resolved:
+                    resolved_ip = validate_ip_address(resolved)
+                    if resolved_ip:
+                        validated_hosts.append(resolved_ip)
         logging.info("Trusted hosts: %s", validated_hosts)
         return validated_hosts
 
@@ -249,8 +195,7 @@ class Config(BaseSettings):
                     "or specify exact domains in APP_CORS_DOMAINS."
                 )
                 raise ValueError(
-                    "CORS wildcard (*) is disabled. "
-                    "Set APP_ALLOW_CORS_WILDCARD=true or use specific domains."
+                    "CORS wildcard (*) is disabled. Set APP_ALLOW_CORS_WILDCARD=true or use specific domains."
                 )
             else:
                 logging.warning(
@@ -265,10 +210,7 @@ class Config(BaseSettings):
     def validate_compression_level(cls, level: int) -> int:
         """Validate compression level is in valid range."""
         if not 1 <= level <= 9:
-            logging.warning(
-                "Invalid compression level %d, must be 1-9. Using default 6.",
-                level
-            )
+            logging.warning("Invalid compression level %d, must be 1-9. Using default 6.", level)
             return 6
         return level
 
@@ -276,10 +218,7 @@ class Config(BaseSettings):
     def validate_compression_threshold(cls, threshold: int) -> int:
         """Validate compression threshold is reasonable."""
         if threshold < 0:
-            logging.warning(
-                "Invalid compression threshold %d, must be >= 0. Using default 512.",
-                threshold
-            )
+            logging.warning("Invalid compression threshold %d, must be >= 0. Using default 512.", threshold)
             return 512
         return threshold
 
@@ -288,10 +227,7 @@ class Config(BaseSettings):
         if self.ENVIRONMENT == "prod":
             # Production security validations
             if self.DEBUG:
-                logging.error(
-                    "PRODUCTION ERROR: DEBUG mode is enabled in production. "
-                    "Set APP_DEBUG=false"
-                )
+                logging.error("PRODUCTION ERROR: DEBUG mode is enabled in production. Set APP_DEBUG=false")
                 raise ValueError("DEBUG must be False in production")
 
             if "*" in self.CORS_DOMAINS:

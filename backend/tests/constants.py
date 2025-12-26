@@ -23,5 +23,5 @@ TIME_TOLERANCE_SECONDS = 2  # Tolerance for datetime comparisons in tests
 
 # Storage Mocking
 STORAGE_MOCK_TOTAL = 1000000  # 1MB total storage
-STORAGE_MOCK_USED = 999999    # Almost full
-STORAGE_MOCK_FREE = 1          # 1 byte free
+STORAGE_MOCK_USED = 999999  # Almost full
+STORAGE_MOCK_FREE = 1  # 1 byte free

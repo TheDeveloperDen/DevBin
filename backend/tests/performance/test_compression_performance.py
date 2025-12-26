@@ -1,5 +1,7 @@
 import time
+
 import pytest
+
 from app.utils.compression import compress_content, decompress_content
 
 
@@ -28,7 +30,12 @@ class TestCompressionPerformance:
         total_overhead_ms = compress_time_ms + decompress_time_ms
 
         # Print results for visibility
-        print(f"\nSize {size}: compress={compress_time_ms:.3f}ms, decompress={decompress_time_ms:.3f}ms, total={total_overhead_ms:.3f}ms")
+        print(
+            f"""\nSize {size}:
+            compress={compress_time_ms:.3f}ms,
+            decompress={decompress_time_ms:.3f}ms,
+            total={total_overhead_ms:.3f}ms"""
+        )
 
         # Verify decompression works
         assert decompressed == content
