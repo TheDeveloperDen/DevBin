@@ -173,7 +173,8 @@ class TestPasteGetAPI:
 
         assert response.status_code == 404
         data = response.json()
-        assert data["error"] == "paste_not_found"
+        assert "error" in data
+        assert nonexistent_id in data["error"]  # Error message contains the paste ID
 
     async def test_get_paste_caches_response(self, test_client: AsyncClient, authenticated_paste, bypass_headers):
         """GET /pastes/{id} should cache successful responses."""
@@ -261,6 +262,57 @@ class TestPasteGetAPI:
 
             # Should return 404 for expired paste
             assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+class TestPasteRawAPI:
+    """API tests for raw paste content endpoint."""
+
+    async def test_get_raw_paste_returns_plain_text(self, test_client: AsyncClient, authenticated_paste, bypass_headers):
+        """GET /pastes/{id}/raw should return raw paste content as plain text."""
+        paste_id = authenticated_paste["id"]
+
+        response = await test_client.get(f"/pastes/{paste_id}/raw", headers=bypass_headers)
+
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "text/plain; charset=utf-8"
+        assert response.text == "This is test content"
+
+    async def test_get_raw_paste_returns_404_for_nonexistent(self, test_client: AsyncClient, bypass_headers):
+        """GET /pastes/{id}/raw should return 404 for non-existent paste."""
+        nonexistent_id = str(uuid.uuid4())
+
+        response = await test_client.get(f"/pastes/{nonexistent_id}/raw", headers=bypass_headers)
+
+        assert response.status_code == 404
+
+    async def test_get_raw_paste_includes_cache_headers(self, test_client: AsyncClient, authenticated_paste, bypass_headers):
+        """GET /pastes/{id}/raw should include cache control headers."""
+        paste_id = authenticated_paste["id"]
+
+        response = await test_client.get(f"/pastes/{paste_id}/raw", headers=bypass_headers)
+
+        assert response.status_code == 200
+        assert "Cache-Control" in response.headers
+        assert "public" in response.headers["Cache-Control"]
+        assert "max-age" in response.headers["Cache-Control"]
+
+    async def test_get_raw_paste_with_unicode_content(self, test_client: AsyncClient, bypass_headers):
+        """GET /pastes/{id}/raw should correctly return unicode content."""
+        paste_data = {
+            "title": "Unicode Paste",
+            "content": "Hello 世界! 🎉 Special chars: <>&\"'",
+            "content_language": "plain_text",
+        }
+
+        create_response = await test_client.post("/pastes", json=paste_data, headers=bypass_headers)
+        assert create_response.status_code == 200
+        paste_id = create_response.json()["id"]
+
+        response = await test_client.get(f"/pastes/{paste_id}/raw", headers=bypass_headers)
+
+        assert response.status_code == 200
+        assert response.text == paste_data["content"]
 
 
 @pytest.mark.asyncio
@@ -356,8 +408,8 @@ class TestPasteEditAPI:
 
         assert response.status_code == 404
         data = response.json()
-        assert "detail" in data
-        assert data["detail"]["error"] == "paste_not_found"
+        assert "error" in data
+        assert paste_id in data["error"]  # Error message contains the paste ID
 
     async def test_edit_paste_returns_404_for_nonexistent_paste(self, test_client: AsyncClient):
         """PUT /pastes/{id} should return 404 for non-existent paste."""
@@ -410,8 +462,8 @@ class TestPasteDeleteAPI:
 
         assert response.status_code == 404
         data = response.json()
-        assert "detail" in data
-        assert data["detail"]["error"] == "paste_not_found"
+        assert "error" in data
+        assert paste_id in data["error"]  # Error message contains the paste ID
 
         # Verify paste still exists
         get_response = await test_client.get(f"/pastes/{paste_id}")
