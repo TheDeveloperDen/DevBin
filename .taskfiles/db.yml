@@ -1,0 +1,18 @@
+# Database tasks
+version: '3'
+
+tasks:
+  migrate:
+    desc: Run pending database migrations
+    cmds:
+      - "{{.COMPOSE_DEV}} --profile dev_backend run --rm devbin uv run alembic upgrade head"
+
+  migrate:new:
+    desc: "Create new migration (usage: task db:migrate:new -- 'description')"
+    cmds:
+      - "{{.COMPOSE_DEV}} --profile dev_backend run --rm devbin uv run alembic revision --autogenerate -m '{{.CLI_ARGS}}'"
+
+  shell:
+    desc: Open PostgreSQL shell
+    cmds:
+      - "{{.COMPOSE_DEV}} exec devbin_db psql -U postgres -d devbin"

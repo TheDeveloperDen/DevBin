@@ -1,0 +1,27 @@
+# Testing tasks
+version: '3'
+
+tasks:
+  all:
+    desc: Run all backend tests
+    dir: backend
+    cmds:
+      - uv run pytest
+
+  unit:
+    desc: Run unit tests only
+    dir: backend
+    cmds:
+      - uv run pytest tests/unit
+
+  integration:
+    desc: Run integration tests only
+    dir: backend
+    cmds:
+      - uv run pytest tests/integration
+
+  cov:
+    desc: Run tests with coverage report
+    dir: backend
+    cmds:
+      - uv run pytest --cov=app --cov-report=term-missing

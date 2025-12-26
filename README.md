@@ -29,7 +29,7 @@ Run `task --list` for all available commands.
 | `task dev:reset` | Reset with fresh volumes |
 | `task db:migrate` | Run migrations |
 | `task db:shell` | PostgreSQL shell |
-| `task test` | Run all tests |
+| `task test:all` | Run all tests |
 | `task prod:up` | Start production |
 | `task prod:down` | Stop production |
 | `task clean` | Remove containers and volumes |

@@ -6,123 +6,28 @@ vars:
   COMPOSE_DEV: docker compose
   COMPOSE_PROD: docker compose -f docker-compose.prod.yml
 
-tasks:
-  # ====================
-  # Development
-  # ====================
-  dev:up:
-    desc: Start all development services
-    cmds:
-      - "{{.COMPOSE_DEV}} --profile dev_frontend --profile dev_backend up -d --build"
-
-  dev:backend:
-    desc: Start backend only (with database)
-    env:
-      APP_DEBUG: "true"
-    cmds:
-      - "{{.COMPOSE_DEV}} --profile dev_backend up -d --build"
-
-  dev:db:
-    desc: Start backend only (with database)
-    env:
-      APP_DEBUG: "true"
-    cmds:
-      - "{{.COMPOSE_DEV}} up -d"
-
-  dev:frontend:
-    desc: Start frontend only
-    env:
-      APP_DEBUG: "true"
-    cmds:
-      - "{{.COMPOSE_DEV}} --profile dev_frontend up -d --build"
-
-  dev:down:
-    desc: Stop all development services
-    cmds:
-      - "{{.COMPOSE_DEV}} --profile dev_frontend --profile dev_backend down"
-
-  dev:reset:
-    desc: Reset development environment (removes volumes)
-    cmds:
-      - "{{.COMPOSE_DEV}} --profile dev_frontend --profile dev_backend down --volumes"
-      - "{{.COMPOSE_DEV}} --profile dev_frontend --profile dev_backend up -d --build"
-
-  dev:logs:
-    desc: Tail logs from all development services
-    cmds:
-      - "{{.COMPOSE_DEV}} --profile dev_frontend --profile dev_backend logs -f"
-
-  dev:logs:backend:
-    desc: Tail backend logs only
-    cmds:
-      - "{{.COMPOSE_DEV}} --profile dev_backend logs -f devbin"
-
-  # ====================
-  # Production
-  # ====================
-  prod:up:
-    desc: Start production services
-    cmds:
-      - "{{.COMPOSE_PROD}} up -d"
-
-  prod:down:
-    desc: Stop production services
-    cmds:
-      - "{{.COMPOSE_PROD}} down"
-
-  prod:logs:
-    desc: Tail production logs
-    cmds:
-      - "{{.COMPOSE_PROD}} logs -f"
-
-  # ====================
-  # Database
-  # ====================
-  db:migrate:
-    desc: Run pending database migrations
-    cmds:
-      - "{{.COMPOSE_DEV}} --profile dev_backend run --rm devbin uv run alembic upgrade head"
-
-  db:migrate:new:
-    desc: "Create new migration (usage: task db:migrate:new -- 'description')"
-    cmds:
-      - "{{.COMPOSE_DEV}} --profile dev_backend run --rm devbin uv run alembic revision --autogenerate -m '{{.CLI_ARGS}}'"
-
-  db:shell:
-    desc: Open PostgreSQL shell
-    cmds:
-      - "{{.COMPOSE_DEV}} exec devbin_db psql -U postgres -d devbin"
-
-  # ====================
-  # Testing
-  # ====================
+includes:
+  dev:
+    taskfile: .taskfiles/dev.yml
+    vars:
+      COMPOSE_DEV: "{{.COMPOSE_DEV}}"
+  prod:
+    taskfile: .taskfiles/prod.yml
+    vars:
+      COMPOSE_PROD: "{{.COMPOSE_PROD}}"
+  db:
+    taskfile: .taskfiles/db.yml
+    vars:
+      COMPOSE_DEV: "{{.COMPOSE_DEV}}"
   test:
-    desc: Run all backend tests
-    dir: backend
-    cmds:
-      - uv run pytest
+    taskfile: .taskfiles/test.yml
 
-  test:unit:
-    desc: Run unit tests only
-    dir: backend
+tasks:
+  default:
+    desc: Show available tasks
     cmds:
-      - uv run pytest tests/unit
+      - task --list
 
-  test:integration:
-    desc: Run integration tests only
-    dir: backend
-    cmds:
-      - uv run pytest tests/integration
-
-  test:cov:
-    desc: Run tests with coverage report
-    dir: backend
-    cmds:
-      - uv run pytest --cov=app --cov-report=term-missing
-
-  # ====================
-  # Utilities
-  # ====================
   build:
     desc: Build all containers
     cmds:

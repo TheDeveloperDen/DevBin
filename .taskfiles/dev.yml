@@ -1,0 +1,50 @@
+# Development tasks
+version: '3'
+
+tasks:
+  up:
+    desc: Start all development services
+    cmds:
+      - "{{.COMPOSE_DEV}} --profile dev_frontend --profile dev_backend up -d --build"
+
+  backend:
+    desc: Start backend only (with database)
+    env:
+      APP_DEBUG: "true"
+    cmds:
+      - "{{.COMPOSE_DEV}} --profile dev_backend up -d --build"
+
+  db:
+    desc: Start database only
+    env:
+      APP_DEBUG: "true"
+    cmds:
+      - "{{.COMPOSE_DEV}} up -d"
+
+  frontend:
+    desc: Start frontend only
+    env:
+      APP_DEBUG: "true"
+    cmds:
+      - "{{.COMPOSE_DEV}} --profile dev_frontend up -d --build"
+
+  down:
+    desc: Stop all development services
+    cmds:
+      - "{{.COMPOSE_DEV}} --profile dev_frontend --profile dev_backend down"
+
+  reset:
+    desc: Reset development environment (removes volumes)
+    cmds:
+      - "{{.COMPOSE_DEV}} --profile dev_frontend --profile dev_backend down --volumes"
+      - "{{.COMPOSE_DEV}} --profile dev_frontend --profile dev_backend up -d --build"
+
+  logs:
+    desc: Tail logs from all development services
+    cmds:
+      - "{{.COMPOSE_DEV}} --profile dev_frontend --profile dev_backend logs -f"
+
+  logs:backend:
+    desc: Tail backend logs only
+    cmds:
+      - "{{.COMPOSE_DEV}} --profile dev_backend logs -f devbin"
