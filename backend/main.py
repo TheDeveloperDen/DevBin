@@ -28,7 +28,7 @@ from app.exceptions import (
     StorageQuotaExceededError,
     UnauthorizedError,
 )
-from app.ratelimit import limiter
+from app.ratelimit import NoOpLimiter, init_rate_limiter, limiter
 from app.services.cleanup_service import CleanupService
 from app.utils.logging import configure_logging
 
@@ -68,8 +68,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 def apply_rate_limiter(app: FastAPI):
-    app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    initialized_limiter = init_rate_limiter(config)
+    app.state.limiter = initialized_limiter
+    # Only add exception handler if rate limiting is enabled
+    if not isinstance(initialized_limiter, NoOpLimiter):
+        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 def create_app() -> FastAPI:

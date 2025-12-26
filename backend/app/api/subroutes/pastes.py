@@ -1,6 +1,5 @@
 import logging
 from typing import TYPE_CHECKING
-from uuid import uuid4
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException
@@ -20,7 +19,7 @@ from app.api.dto.paste_dto import (
 )
 from app.config import config
 from app.containers import Container
-from app.ratelimit import get_ip_address, limiter
+from app.ratelimit import create_limit_resolver, get_exempt_key, limiter
 from app.services.paste_service import PasteService
 from app.utils.LRUMemoryCache import LRUMemoryCache
 
@@ -46,19 +45,11 @@ edit_token_key_header = APIKeyHeader(name="Authorization", scheme_name="Edit Tok
 delete_token_key_header = APIKeyHeader(name="Authorization", scheme_name="Delete Token")
 
 
-def get_exempt_key(request: Request) -> str:
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or auth_header != config.BYPASS_TOKEN:
-        return get_ip_address(request)
-
-    return str(uuid4())  # To simulate a new request if it is the BYPASS_TOKEN
-
-
 @pastes_route.get(
     "/legacy/{paste_id}",
     responses={404: {"model": ErrorResponse}, 200: {"model": LegacyPasteResponse}},
 )
-@limiter.limit("10/minute", key_func=get_exempt_key)
+@limiter.limit(create_limit_resolver(config, "get_paste_legacy"), key_func=get_exempt_key)
 @inject
 async def get_paste(
     request: Request,
@@ -105,7 +96,7 @@ async def get_paste(
     "/{paste_id}",
     responses={404: {"model": ErrorResponse}, 200: {"model": PasteResponse}},
 )
-@limiter.limit("10/minute", key_func=get_exempt_key)
+@limiter.limit(create_limit_resolver(config, "get_paste"), key_func=get_exempt_key)
 @inject
 async def get_paste(
     request: Request,
@@ -148,7 +139,7 @@ async def get_paste(
 
 
 @pastes_route.post("", response_model=CreatePasteResponse)
-@limiter.limit("4/minute", key_func=get_exempt_key)
+@limiter.limit(create_limit_resolver(config, "create_paste"), key_func=get_exempt_key)
 @inject
 async def create_paste(
     request: Request,
@@ -159,7 +150,7 @@ async def create_paste(
 
 
 @pastes_route.put("/{paste_id}")
-@limiter.limit("4/minute", key_func=get_exempt_key)
+@limiter.limit(create_limit_resolver(config, "edit_paste"), key_func=get_exempt_key)
 @inject
 async def edit_paste(
     request: Request,
@@ -183,7 +174,7 @@ async def edit_paste(
 
 
 @pastes_route.delete("/{paste_id}")
-@limiter.limit("4/minute", key_func=get_exempt_key)
+@limiter.limit(create_limit_resolver(config, "delete_paste"), key_func=get_exempt_key)
 @inject
 async def delete_paste(
     request: Request,

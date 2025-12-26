@@ -12,7 +12,7 @@ from app.api.subroutes.pastes import pastes_route
 from app.config import config
 from app.containers import Container
 from app.exceptions import UnauthorizedError
-from app.ratelimit import limiter
+from app.ratelimit import create_limit_resolver, limiter
 from app.services.health_service import HealthService
 
 router = APIRouter()
@@ -51,7 +51,7 @@ def verify_metrics_token(credentials: HTTPAuthorizationCredentials | None = Depe
 
 
 @router.get("/health")
-@limiter.limit("60/minute")
+@limiter.limit(create_limit_resolver(config, "health"))
 @inject
 async def health(
     request: Request,
@@ -61,7 +61,7 @@ async def health(
 
 
 @router.get("/ready")
-@limiter.limit("60/minute")
+@limiter.limit(create_limit_resolver(config, "health"))
 @inject
 async def ready(
     request: Request,

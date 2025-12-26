@@ -1,11 +1,27 @@
 import logging
-from typing import Literal
+import re
+from typing import Annotated, Literal
 
 from dotenv import load_dotenv
-from pydantic import Field, ValidationError, field_validator
+from pydantic import AfterValidator, Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings
 
 from app.utils.ip import TrustedHost, parse_ip_or_network, resolve_hostname, validate_ip_address
+
+# Rate limit format validation
+RATE_LIMIT_PATTERN = re.compile(r"^\d+/(second|minute|hour|day)$")
+
+
+def validate_rate_limit(value: str) -> str:
+    """Validate rate limit format (e.g., '10/minute', '100/hour')."""
+    if not RATE_LIMIT_PATTERN.match(value):
+        raise ValueError(
+            f"Invalid rate limit format: '{value}'. " "Expected format: '<number>/<second|minute|hour|day>'"
+        )
+    return value
+
+
+RateLimit = Annotated[str, AfterValidator(validate_rate_limit)]
 
 # Load .env file if it exists
 load_dotenv()
@@ -31,7 +47,6 @@ class Config(BaseSettings):
     MAX_CONTENT_LENGTH: int = Field(default=10000, validation_alias="APP_MAX_CONTENT_LENGTH")
     BASE_FOLDER_PATH: str = Field(default="./files", validation_alias="APP_BASE_FOLDER_PATH")
     WORKERS: int | Literal[True] = Field(default=1, validation_alias="APP_WORKERS")
-    BYPASS_TOKEN: str | None = Field(default=None, validation_alias="APP_BYPASS_TOKEN")
     METRICS_TOKEN: str | None = Field(
         default=None,
         validation_alias="APP_METRICS_TOKEN",
@@ -66,6 +81,62 @@ class Config(BaseSettings):
     # Lock backend configuration
     LOCK_TYPE: Literal["file", "redis"] = Field(
         default="file", validation_alias="APP_LOCK_TYPE", description="Lock backend type (file, redis)"
+    )
+
+    # Rate limiting configuration
+    RATELIMIT_ENABLED: bool = Field(
+        default=True,
+        validation_alias="APP_RATELIMIT_ENABLED",
+        description="Enable/disable rate limiting globally",
+    )
+    RATELIMIT_BACKEND: Literal["memory", "redis"] = Field(
+        default="memory",
+        validation_alias="APP_RATELIMIT_BACKEND",
+        description="Rate limiting storage backend (memory, redis)",
+    )
+    RATELIMIT_DEFAULT: RateLimit = Field(
+        default="60/minute",
+        validation_alias="APP_RATELIMIT_DEFAULT",
+        description="Default rate limit for endpoints without explicit limits",
+    )
+
+    # Per-endpoint rate limits
+    RATELIMIT_HEALTH: RateLimit = Field(
+        default="60/minute",
+        validation_alias="APP_RATELIMIT_HEALTH",
+        description="Rate limit for health check endpoints",
+    )
+    RATELIMIT_GET_PASTE: RateLimit = Field(
+        default="10/minute",
+        validation_alias="APP_RATELIMIT_GET_PASTE",
+        description="Rate limit for GET /p/{paste_id}",
+    )
+    RATELIMIT_GET_PASTE_LEGACY: RateLimit = Field(
+        default="10/minute",
+        validation_alias="APP_RATELIMIT_GET_PASTE_LEGACY",
+        description="Rate limit for GET /{paste_id} (legacy endpoint)",
+    )
+    RATELIMIT_CREATE_PASTE: RateLimit = Field(
+        default="4/minute",
+        validation_alias="APP_RATELIMIT_CREATE_PASTE",
+        description="Rate limit for POST /p/",
+    )
+    RATELIMIT_EDIT_PASTE: RateLimit = Field(
+        default="4/minute",
+        validation_alias="APP_RATELIMIT_EDIT_PASTE",
+        description="Rate limit for PUT /p/{paste_id}",
+    )
+    RATELIMIT_DELETE_PASTE: RateLimit = Field(
+        default="4/minute",
+        validation_alias="APP_RATELIMIT_DELETE_PASTE",
+        description="Rate limit for DELETE /p/{paste_id}",
+    )
+
+    # Bypass tokens for rate limiting (JSON list format)
+    RATELIMIT_BYPASS_TOKENS: list[str] = Field(
+        default=[],
+        validation_alias="APP_RATELIMIT_BYPASS_TOKENS",
+        description="List of tokens that bypass rate limiting",
     )
 
     # Logging configuration
