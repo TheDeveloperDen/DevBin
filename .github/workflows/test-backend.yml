@@ -46,7 +46,7 @@ jobs:
           cache-dependency-glob: "backend/uv.lock"
 
       - name: Install dependencies
-        run: uv sync --extra test --extra migrations --extra metrics
+        run: uv sync --group test --extra migrations --extra metrics
 
       - name: Run tests
         env:
