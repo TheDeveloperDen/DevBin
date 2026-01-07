@@ -3,13 +3,13 @@ import { ApiService } from "$lib/api";
 import type { Paste } from "$lib/types";
 import { env } from "$env/dynamic/private";
 
-export async function load({ params, getClientAddress }) {
-  const client_ip = getClientAddress();
-  const { id: paste_id } = params;
+export async function load({params, request, getClientAddress}) {
+    const client_ip = getUserIpAddress(request, getClientAddress);
+    const {id: paste_id} = params;
 
   try {
     const response = await ApiService.getPasteByUuidPastesPasteIdGet({
-      baseUrl: env.API_URL,
+      baseUrl: API_URL,
       path: {
         paste_id: paste_id,
       },
@@ -18,31 +18,31 @@ export async function load({ params, getClientAddress }) {
       },
     });
 
-    if (!response.data) {
-      return { error: "Paste not found or is currently unavailable" };
-    }
+        if (!response.data) {
+            return {error: "Paste not found or is currently unavailable"};
+        }
 
-    if (response.error) {
-      console.log(response.error);
-      return { error: response.error?.detail };
-    }
+        if (response.error) {
+            console.log(response.error);
+            return {error: response.error?.detail};
+        }
 
-    const { id, title, content, content_language, expires_at, created_at } =
-      JSON.parse(JSON.stringify(response.data)) as Paste;
-    return {
-      id,
-      title,
-      content_language,
-      content,
-      expires_at,
-      created_at,
-    };
-  } catch (error) {
-    console.log("Load error:", error);
-    error =
-      error instanceof Error
-        ? error.message
-        : "Something went wrong. Please try again";
-    return { error };
-  }
+        const {id, title, content, content_language, expires_at, created_at} =
+            JSON.parse(JSON.stringify(response.data)) as Paste;
+        return {
+            id,
+            title,
+            content_language,
+            content,
+            expires_at,
+            created_at,
+        };
+    } catch (error) {
+        console.log("Load error:", error);
+        error =
+            error instanceof Error
+                ? error.message
+                : "Something went wrong. Please try again";
+        return {error};
+    }
 }

@@ -1,0 +1,59 @@
+name: Build Images
+
+on:
+  pull_request:
+    branches:
+      - master
+    types: [opened, synchronize]
+  workflow_dispatch:
+
+jobs:
+  setup_build:
+    runs-on: ubuntu-latest
+    outputs:
+      backend_changed: ${{ steps.changed_files.outputs.backend == 'true' || github.event_name == 'workflow_dispatch' }}
+      frontend_changed: ${{ steps.changed_files.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch' }}
+      repo_lc: ${{ steps.lowercase_repo.outputs.REPO_LC }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Get changes
+        uses: tj-actions/changed-files@v45
+        id: changed_files
+        with:
+          files_yaml: |
+            backend:
+              - 'backend/**'
+              - '!backend/**/*.md'
+            frontend:
+              - 'frontend/**'
+              - '!frontend/**/*.md'
+          base_sha: ${{ github.event.pull_request.base.sha || github.sha }}
+
+      - name: Set lowercase repository variable
+        id: lowercase_repo
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          REPO_LC=$(echo "$REPOSITORY" | tr '[:upper:]' '[:lower:]')
+          echo "REPO_LC=$REPO_LC" >> $GITHUB_OUTPUT
+
+  build-backend:
+    needs: setup_build
+    if: ${{ needs.setup_build.outputs.backend_changed == 'true' }}
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      image_name: backend
+      context: backend
+      additional_tags: ghcr.io/${{ needs.setup_build.outputs.repo_lc }}-backend-preview:${{ github.event.pull_request.number || github.ref_name }}
+
+  build-frontend:
+    needs: setup_build
+    if: ${{ needs.setup_build.outputs.frontend_changed == 'true' }}
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      image_name: frontend
+      context: frontend
+      additional_tags: ghcr.io/${{ needs.setup_build.outputs.repo_lc }}-frontend-preview:${{ github.event.pull_request.number || github.ref_name }}

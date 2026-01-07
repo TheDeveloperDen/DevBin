@@ -1,28 +1,72 @@
-# DevBin – The Bin for all your Pasting needs
+# DevBin
 
-A simple pastebin service written in Python using FastAPI for the Backend and using Svelt for the Frontend.
+A lightweight pastebin service built with FastAPI and Svelte.
 
-## Features ( Comming soon )
+## Quick Start
 
-- Simple and clean interface
-- Syntax highlighting
-- Paste expiration
-- Easy to deploy
-- No database required (uses JSON files)
-- Supports multiple paste formats
+```bash
+git clone <repository-url>
+cd DevBin
+cp .env.example .env      # Configure as needed
+task dev:up               # Start all services
+task db:migrate           # Run migrations
+```
 
-## Requirements
+**Access:**
+- Frontend: http://localhost:3000
+- API Docs: http://localhost:8000/docs
+- Health: http://localhost:8000/health
 
-- Docker Engine
-- Docker Compose
+## Commands
 
-## Installation
+Run `task --list` for all available commands.
 
-> Note: You maybe required to use docker-compose instead of docker compose depending on your docker version
+| Command | Description |
+|---------|-------------|
+| `task dev:up` | Start all dev services |
+| `task dev:down` | Stop all dev services |
+| `task dev:logs` | Tail logs |
+| `task dev:reset` | Reset with fresh volumes |
+| `task db:migrate` | Run migrations |
+| `task db:shell` | PostgreSQL shell |
+| `task test:all` | Run all tests |
+| `task prod:up` | Start production |
+| `task prod:down` | Stop production |
+| `task clean` | Remove containers and volumes |
 
-1. Clone the repository
-2. Copy the `.env.example` to `.env` and update the values.   
-   2.1. Run `docker compose up -d`  
-   2.2. Run migrations with `docker compose run --rm app uv run alembic upgrade head`  
-3. Check http://localhost:8000/docs for the Swagger docs in your browser
-4. Run `docker compose down` to stop the service
+## Configuration
+
+See [`.env.example`](.env.example) for all options. Key settings:
+
+| Variable | Description |
+|----------|-------------|
+| `APP_PORT` | API port (default: 8000) |
+| `APP_MAX_CONTENT_LENGTH` | Max paste size |
+| `APP_STORAGE_TYPE` | `local`, `s3`, or `minio` |
+| `APP_CACHE_TYPE` | `memory` or `redis` |
+
+Full reference: [`docs/configuration.md`](docs/configuration.md)
+
+## API
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Health check |
+| `GET /metrics` | Prometheus metrics |
+| `POST /pastes` | Create paste |
+| `GET /pastes/{id}` | Get paste |
+| `DELETE /pastes/{id}` | Delete paste |
+
+Interactive docs at `/docs` when running.
+
+## Documentation
+
+- [Configuration Reference](docs/configuration.md)
+- [Production Deployment](docs/deployment.md)
+- [Testing Guide](backend/TESTING.md)
+
+## Tech Stack
+
+- **Backend**: FastAPI, SQLAlchemy, PostgreSQL
+- **Frontend**: Svelte
+- **Deployment**: Docker Compose

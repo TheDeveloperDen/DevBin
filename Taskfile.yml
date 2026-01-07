@@ -1,0 +1,40 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  COMPOSE_DEV: docker compose
+  COMPOSE_PROD: docker compose -f docker-compose.prod.yml
+
+includes:
+  dev:
+    taskfile: .taskfiles/dev.yml
+    vars:
+      COMPOSE_DEV: "{{.COMPOSE_DEV}}"
+  prod:
+    taskfile: .taskfiles/prod.yml
+    vars:
+      COMPOSE_PROD: "{{.COMPOSE_PROD}}"
+  db:
+    taskfile: .taskfiles/db.yml
+    vars:
+      COMPOSE_DEV: "{{.COMPOSE_DEV}}"
+  test:
+    taskfile: .taskfiles/test.yml
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Build all containers
+    cmds:
+      - "{{.COMPOSE_DEV}} --profile dev_frontend --profile dev_backend build"
+
+  clean:
+    desc: Remove all containers and volumes
+    cmds:
+      - "{{.COMPOSE_DEV}} --profile dev_frontend --profile dev_backend down --volumes --remove-orphans"
+      - "{{.COMPOSE_PROD}} down --volumes --remove-orphans 2>/dev/null || true"

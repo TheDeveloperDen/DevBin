@@ -1,0 +1,18 @@
+# Production tasks
+version: '3'
+
+tasks:
+  up:
+    desc: Start production services
+    cmds:
+      - "{{.COMPOSE_PROD}} up -d"
+
+  down:
+    desc: Stop production services
+    cmds:
+      - "{{.COMPOSE_PROD}} down"
+
+  logs:
+    desc: Tail production logs
+    cmds:
+      - "{{.COMPOSE_PROD}} logs -f"

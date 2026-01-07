@@ -1,0 +1,73 @@
+name: Build Release Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., 0.0.1-alpha)'
+        required: true
+        type: string
+      set_latest_tag:
+        description: 'Set latest tag'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      repo_lc: ${{ steps.normalize.outputs.repo_lc }}
+      version: ${{ steps.normalize.outputs.version }}
+      backend_tags: ${{ steps.tags.outputs.backend }}
+      frontend_tags: ${{ steps.tags.outputs.frontend }}
+
+    steps:
+      - name: Normalize inputs
+        id: normalize
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          VERSION=$(echo "$VERSION_INPUT" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9.]/-/g')
+          REPO_LC=$(echo "$REPOSITORY" | tr '[:upper:]' '[:lower:]')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "repo_lc=$REPO_LC" >> $GITHUB_OUTPUT
+
+      - name: Build tag strings
+        id: tags
+        env:
+          REPO_LC: ${{ steps.normalize.outputs.repo_lc }}
+          VERSION: ${{ steps.normalize.outputs.version }}
+          SET_LATEST: ${{ inputs.set_latest_tag }}
+        run: |
+          BACKEND_TAGS="ghcr.io/${REPO_LC}-backend:${VERSION}"
+          FRONTEND_TAGS="ghcr.io/${REPO_LC}-frontend:${VERSION}"
+          if [[ "$SET_LATEST" == "true" ]]; then
+            BACKEND_TAGS="${BACKEND_TAGS}
+          ghcr.io/${REPO_LC}-backend:latest"
+            FRONTEND_TAGS="${FRONTEND_TAGS}
+          ghcr.io/${REPO_LC}-frontend:latest"
+          fi
+          echo "backend<<EOF" >> $GITHUB_OUTPUT
+          echo "$BACKEND_TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "frontend<<EOF" >> $GITHUB_OUTPUT
+          echo "$FRONTEND_TAGS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+  build-backend:
+    needs: setup
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      image_name: backend
+      context: backend
+      additional_tags: ${{ needs.setup.outputs.backend_tags }}
+
+  build-frontend:
+    needs: setup
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      image_name: frontend
+      context: frontend
+      additional_tags: ${{ needs.setup.outputs.frontend_tags }}
