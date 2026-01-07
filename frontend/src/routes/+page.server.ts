@@ -1,10 +1,9 @@
-import {fail} from "@sveltejs/kit";
-import type {Actions} from "./$types";
-import type {ContentLanguage, ExpiryValues} from "$lib/types";
-import {convertExpiryValueToDate} from "$lib/utils/date";
-import {ApiService} from "$lib/api";
-import {env} from "$env/dynamic/private";
-import {getUserIpAddress} from "$lib/utils/ip";
+import { fail } from "@sveltejs/kit";
+import type { Actions } from "./$types";
+import type { ContentLanguage, ExpiryValues } from "$lib/types";
+import { convertExpiryValueToDate } from "$lib/utils/date";
+import { ApiService } from "$lib/api";
+import { API_URL } from "$env/static/private";
 
 export const actions = {
     paste: async ({request, getClientAddress}) => {
@@ -28,25 +27,18 @@ export const actions = {
             };
             console.log(cleanedformData);
 
-            // validate
-            if (!cleanedformData.title) {
-                return fail(400, {
-                    title,
-                    expires_at,
-                    content,
-                    content_language,
-                    error: "Please give your paste a title",
-                });
-            }
-            if (!cleanedformData.content) {
-                return fail(400, {
-                    title,
-                    expires_at,
-                    content,
-                    content_language,
-                    error: "Please input your paste content",
-                });
-            }
+      const response = await ApiService.createPastePastesPost({
+        baseUrl: API_URL,
+        body: {
+          title: cleanedformData.title,
+          content: cleanedformData.content,
+          content_language: cleanedformData.content_language as ContentLanguage,
+          expires_at: cleanedformData.expires_at,
+        },
+        headers: {
+          "X-Forwarded-For": client_ip,
+        },
+      });
 
             const response = await ApiService.createPastePastesPost({
                 baseUrl: env.API_BASE_URL,

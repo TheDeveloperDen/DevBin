@@ -1,25 +1,35 @@
 import {ImageResponse} from "@ethercorps/sveltekit-og";
 import SimpleCard from "$lib/components/og/paste-preview.svelte";
-import type {RequestHandler} from "@sveltejs/kit";
-import {ApiService} from "$lib/api";
-import type {Paste} from "$lib/types";
-import {env} from "$env/dynamic/private";
-import {getUserIpAddress} from "$lib/utils/ip";
+import type { RequestHandler } from "@sveltejs/kit";
+import { ApiService } from "$lib/api";
+import type { Paste } from "$lib/types";
+import { API_URL } from "$env/static/private";
 
 export const GET: RequestHandler = async ({params, request, getClientAddress}) => {
     const client_ip = getUserIpAddress(request, getClientAddress);
 
     const {id} = params;
 
-    let title = "";
-    let content = "";
+  if (!id) {
+    title = "Paste not found";
+    content = "No such paste";
+  } else {
+    const response = await ApiService.getPasteByUuidPastesPasteIdGet({
+      baseUrl: API_URL,
+      path: {
+        paste_id: id,
+      },
+      headers: {
+        "X-Forwarded-For": client_ip,
+      },
+    });
 
     if (!id) {
         title = "Paste not found";
         content = "No such paste";
     } else {
         const response = await ApiService.getPastePastesPasteIdGet({
-            baseUrl: env.API_BASE_URL,
+            baseUrl: API_URL,
             path: {
                 paste_id: id,
             },

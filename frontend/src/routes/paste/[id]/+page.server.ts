@@ -1,22 +1,22 @@
-import {ApiService} from "$lib/api";
-import type {Paste} from "$lib/types";
-import {env} from "$env/dynamic/private";
-import {getUserIpAddress} from "$lib/utils/ip";
+import { API_URL } from "$env/static/private";
+import { ApiService } from "$lib/api";
+import type { Paste } from "$lib/types";
+import { env } from "$env/dynamic/private";
 
 export async function load({params, request, getClientAddress}) {
     const client_ip = getUserIpAddress(request, getClientAddress);
     const {id: paste_id} = params;
 
-    try {
-        const response = await ApiService.getPastePastesPasteIdGet({
-            baseUrl: env.API_BASE_URL,
-            path: {
-                paste_id: paste_id,
-            },
-            headers: {
-                "X-Forwarded-For": client_ip,
-            },
-        });
+  try {
+    const response = await ApiService.getPasteByUuidPastesPasteIdGet({
+      baseUrl: API_URL,
+      path: {
+        paste_id: paste_id,
+      },
+      headers: {
+        "X-Forwarded-For": client_ip,
+      },
+    });
 
         if (!response.data) {
             return {error: "Paste not found or is currently unavailable"};
