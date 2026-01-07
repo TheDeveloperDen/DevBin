@@ -39,24 +39,17 @@
     "@codemirror/lang-python": "^6.2.1",
     "@codemirror/lang-sql": "^6.10.0",
     "@codemirror/lang-yaml": "^6.1.2",
-    "@codemirror/language": "^6.11.3",
-    "@codemirror/state": "latest",
-    "@codemirror/view": "^6.39.4",
+    "@codemirror/language": "^6.12.1",
+    "@codemirror/state": "^6.5.3",
+    "@codemirror/view": "^6.39.8",
     "@ethercorps/sveltekit-og": "^4.2.1",
     "@hey-api/openapi-ts": "^0.89.1",
     "@lezer/highlight": "^1.2.3",
-    "@uiw/codemirror-theme-androidstudio": "^4.25.4",
-    "@uiw/codemirror-theme-aura": "^4.25.4",
     "@uiw/codemirror-theme-basic": "^4.25.4",
     "axios": "^1.13.2",
     "codemirror": "^6.0.2",
     "date-fns": "^4.1.0",
-    "dotenv": "^17.2.3"
-  },
-  "pnpm": {
-    "overrides": {
-      "@codemirror/state": "latest",
-      "@codemirror/view": "latest"
-    }
+    "dotenv": "^17.2.3",
+    "thememirror": "^2.0.1"
   }
 }

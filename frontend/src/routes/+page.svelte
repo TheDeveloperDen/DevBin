@@ -11,14 +11,11 @@
 
     let { form }: PageProps = $props();
 
-    let editorValue = $state("");
+    let editorValue = $derived(form?.content || "");
+    let contentLanguage = $derived(form?.content_language || "plain_text");
     let errorMessage = $state("");
 
     $effect(() => {
-        if (form?.content && !editorValue) {
-            editorValue = form?.content;
-        }
-
         let errorTimeout = null;
         if (errorMessage && !errorTimeout) {
             errorTimeout = setTimeout(() => {
@@ -93,23 +90,28 @@
         </div>
     </div>
     <div class="flex-1 flex gap-2 flex-col">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center mb-2 justify-between">
             <select
                 title="content language"
                 class="input"
                 value={form?.content_language}
+                onchange={(event) => {
+                    contentLanguage = event.target?.value;
+                }}
                 name="content_language"
             >
                 <option value="plain_text">plaintext</option>
+                <option value="python">Python</option>
             </select>
             <p class="text-end">
                 {editorValue.trim()
                     .length}/{MAX_PASTE_CONTENT_LENGTH.toLocaleString()}
             </p>
         </div>
-        <CodeEditor
-            bind:value={editorValue}
-            extensions={[aura, getLanguageExtension("default")]}
-        />
     </div>
+    <CodeEditor
+        bind:value={editorValue}
+        editable={true}
+        language={contentLanguage}
+    />
 </form>

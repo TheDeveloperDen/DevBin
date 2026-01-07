@@ -15,27 +15,19 @@ export const languageMap = {
   ts: () => javascript({ typescript: true, jsx: false }),
   jsx: () => javascript({ typescript: false, jsx: true }),
   tsx: () => javascript({ typescript: true, jsx: true }),
-
-  python: python,
-  py: python,
-  java: java,
-
-  cpp: cpp,
-  c: cpp,
-
-  html: html,
-  css: css,
-  scss: css,
-  less: css,
-
-  json: json,
-  yaml: yaml,
-  yml: yaml,
-
-  markdown: markdown,
-  md: markdown,
-  sql: sql,
-
+  json: () => json(),
+  yaml: () => yaml(),
+  yml: () => yaml(),
+  markdown: () => markdown(),
+  md: () => markdown(),
+  sql: () => sql(),
+  python: () => python(),
+  py: () => python(),
+  java: () => java(),
+  cpp: () => cpp(),
+  c: () => cpp(),
+  html: () => html(),
+  css: () => css(),
   default: () => [],
 };
 

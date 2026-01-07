@@ -3,6 +3,10 @@
 version: '3'
 
 tasks:
+  api:setup_test:
+    cmds:
+      - uv sync --extra test
+      - ./scripts/setup_test_db.sh
   api:start:
     env:
       APP_DEBUG: true
@@ -11,3 +15,5 @@ tasks:
     cmd: alembic upgrade head
   api:downmigrate:
     cmd: alembic downgrade -1
+  api:test:
+    cmd: uv run pytest

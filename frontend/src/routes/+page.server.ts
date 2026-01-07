@@ -3,7 +3,7 @@ import type { Actions } from "./$types";
 import type { ContentLanguage, ExpiryValues } from "$lib/types";
 import { convertExpiryValueToDate } from "$lib/utils/date";
 import { ApiService } from "$lib/api";
-import { env } from "$env/dynamic/private";
+import { API_URL } from "$env/static/private";
 
 export const actions = {
   paste: async ({ request, getClientAddress }) => {
@@ -47,7 +47,7 @@ export const actions = {
       }
 
       const response = await ApiService.createPastePastesPost({
-        baseUrl: env.API_BASE_URL,
+        baseUrl: API_URL,
         body: {
           title: cleanedformData.title,
           content: cleanedformData.content,

@@ -1,57 +1,65 @@
 <script lang="ts">
-    import { EditorView, basicSetup } from "codemirror";
-    import { EditorState, type Extension } from "@codemirror/state";
-    import { onMount, onDestroy } from "svelte";
+    import { onMount } from "svelte";
+    import { EditorView } from "@codemirror/view";
+    import { basicSetup } from "codemirror";
+    import { EditorState, StateEffect } from "@codemirror/state";
+    import { syntaxHighlighting } from "@codemirror/language";
+    import { customTheme, customHighlight } from "$lib/editor-theme";
+    import { getLanguageExtension, type LanguageType } from "$lib/editor-lang";
 
-    interface EditorProps {
-        value: string;
-        extensions?: Extension[];
-    }
-
-    let { value = $bindable(""), extensions = [] }: EditorProps = $props();
+    let {
+        value = $bindable(""),
+        language = "yaml" as LanguageType,
+        editable = false,
+    } = $props();
 
     let editorRef: HTMLDivElement;
     let view: EditorView | null = null;
 
-    const baseExtensions: Extension[] = [
+    let extensionsConfig = $derived([
         basicSetup,
-        EditorState.allowMultipleSelections.of(true),
-    ];
+        ...getLanguageExtension(language),
+        customTheme,
+        syntaxHighlighting(customHighlight),
+        EditorState.readOnly.of(!editable),
+        EditorView.editable.of(editable),
+    ]);
 
-    function initializeEditor() {
-        const state = EditorState.create({
-            doc: value,
-            extensions: [...baseExtensions, ...extensions],
-        });
-
+    onMount(() => {
         view = new EditorView({
-            state,
+            state: EditorState.create({
+                doc: value,
+                extensions: extensionsConfig,
+            }),
             parent: editorRef,
             dispatchTransactions(trs, view) {
                 view.update(trs);
                 if (trs.some((tr) => tr.docChanged)) {
-                    value = view.state.doc.toString();
+                    const newValue = view.state.doc.toString();
+                    if (value !== newValue) value = newValue;
                 }
             },
         });
-    }
-
-    onMount(() => {
-        initializeEditor();
-    });
-
-    onDestroy(() => {
-        view?.destroy();
-        view = null;
     });
 
     $effect(() => {
-        if (view && value !== view.state.doc.toString()) {
+        if (view) {
             view.dispatch({
-                changes: { from: 0, to: view.state.doc.length, insert: value },
+                effects: StateEffect.reconfigure.of(extensionsConfig),
             });
         }
     });
 </script>
 
-<div class="h-full w-full overflow-hidden" bind:this={editorRef}></div>
+<div bind:this={editorRef} class="w-full h-full"></div>
+
+<style>
+    :global(.cm-editor) {
+        height: 100%;
+        outline: none !important;
+    }
+
+    :global(.cm-scroller) {
+        font-family: "Cascadia Code", "Fira Code", monospace !important;
+    }
+</style>

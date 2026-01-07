@@ -1,3 +1,58 @@
-files/
+# Virtual environments
 .venv/
+venv/
+env/
+ENV/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.ruff_cache/
+
+# IDE and editor files
+.idea/
+.vscode/
+.claude/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+README.md
+docs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
 alembic.ini
+.cleanup.lock
+
+# Storage directory (mounted as volume)
+files/
+
+# Development files
+Dockerfile
+Dockerfile.*
+.dockerignore
+docker-compose*.yml

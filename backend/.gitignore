@@ -11,3 +11,8 @@ wheels/
 # Virtual environments
 .venv
 .env
+
+.cleanup.lock
+files/
+
+.coverage

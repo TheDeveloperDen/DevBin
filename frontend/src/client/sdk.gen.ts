@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreatePastePastesPostData, CreatePastePastesPostErrors, CreatePastePastesPostResponses, GetPastePastesPasteIdGetData, GetPastePastesPasteIdGetErrors, GetPastePastesPasteIdGetResponses, HealthHealthGetData, HealthHealthGetResponses } from './types.gen';
+import type { CreatePastePastesPostData, CreatePastePastesPostErrors, CreatePastePastesPostResponses, DeletePastePastesPasteIdDeleteData, DeletePastePastesPasteIdDeleteErrors, DeletePastePastesPasteIdDeleteResponses, EditPastePastesPasteIdPutData, EditPastePastesPasteIdPutErrors, EditPastePastesPasteIdPutResponses, GetLegacyPastePastesLegacyPasteIdGetData, GetLegacyPastePastesLegacyPasteIdGetErrors, GetLegacyPastePastesLegacyPasteIdGetResponses, GetPasteByUuidPastesPasteIdGetData, GetPasteByUuidPastesPasteIdGetErrors, GetPasteByUuidPastesPasteIdGetResponses, GetPasteRawPastesPasteIdRawGetData, GetPasteRawPastesPasteIdRawGetErrors, GetPasteRawPastesPasteIdRawGetResponses, HealthHealthGetData, HealthHealthGetResponses, MetricsMetricsGetData, MetricsMetricsGetResponses, ReadyReadyGetData, ReadyReadyGetResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -24,12 +24,76 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 export const healthHealthGet = <ThrowOnError extends boolean = false>(options?: Options<HealthHealthGetData, ThrowOnError>) => (options?.client ?? client).get<HealthHealthGetResponses, unknown, ThrowOnError>({ url: '/health', ...options });
 
 /**
- * Get Paste
+ * Ready
+ *
+ * Readiness endpoint for load balancers.
  */
-export const getPastePastesPasteIdGet = <ThrowOnError extends boolean = false>(options: Options<GetPastePastesPasteIdGetData, ThrowOnError>) => (options.client ?? client).get<GetPastePastesPasteIdGetResponses, GetPastePastesPasteIdGetErrors, ThrowOnError>({ url: '/pastes/{paste_id}', ...options });
+export const readyReadyGet = <ThrowOnError extends boolean = false>(options?: Options<ReadyReadyGetData, ThrowOnError>) => (options?.client ?? client).get<ReadyReadyGetResponses, unknown, ThrowOnError>({ url: '/ready', ...options });
 
 /**
- * Create Paste
+ * Metrics
+ *
+ * Prometheus metrics endpoint.
+ *
+ * Requires Bearer token authentication if APP_METRICS_TOKEN is configured.
+ */
+export const metricsMetricsGet = <ThrowOnError extends boolean = false>(options?: Options<MetricsMetricsGetData, ThrowOnError>) => (options?.client ?? client).get<MetricsMetricsGetResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/metrics',
+    ...options
+});
+
+/**
+ * Get legacy Hastebin-format paste
+ *
+ * Retrieve a paste stored in legacy Hastebin format by its ID.
+ */
+export const getLegacyPastePastesLegacyPasteIdGet = <ThrowOnError extends boolean = false>(options: Options<GetLegacyPastePastesLegacyPasteIdGetData, ThrowOnError>) => (options.client ?? client).get<GetLegacyPastePastesLegacyPasteIdGetResponses, GetLegacyPastePastesLegacyPasteIdGetErrors, ThrowOnError>({ url: '/pastes/legacy/{paste_id}', ...options });
+
+/**
+ * Delete a paste
+ *
+ * Permanently delete a paste. Requires a valid delete token.
+ */
+export const deletePastePastesPasteIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeletePastePastesPasteIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeletePastePastesPasteIdDeleteResponses, DeletePastePastesPasteIdDeleteErrors, ThrowOnError>({
+    security: [{ name: 'Authorization', type: 'apiKey' }],
+    url: '/pastes/{paste_id}',
+    ...options
+});
+
+/**
+ * Get paste by UUID
+ *
+ * Retrieve a paste by its UUID identifier.
+ */
+export const getPasteByUuidPastesPasteIdGet = <ThrowOnError extends boolean = false>(options: Options<GetPasteByUuidPastesPasteIdGetData, ThrowOnError>) => (options.client ?? client).get<GetPasteByUuidPastesPasteIdGetResponses, GetPasteByUuidPastesPasteIdGetErrors, ThrowOnError>({ url: '/pastes/{paste_id}', ...options });
+
+/**
+ * Edit an existing paste
+ *
+ * Update a paste's content or metadata. Requires a valid edit token.
+ */
+export const editPastePastesPasteIdPut = <ThrowOnError extends boolean = false>(options: Options<EditPastePastesPasteIdPutData, ThrowOnError>) => (options.client ?? client).put<EditPastePastesPasteIdPutResponses, EditPastePastesPasteIdPutErrors, ThrowOnError>({
+    security: [{ name: 'Authorization', type: 'apiKey' }],
+    url: '/pastes/{paste_id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get raw paste content
+ *
+ * Retrieve only the raw text content of a paste. Useful for curl/wget users.
+ */
+export const getPasteRawPastesPasteIdRawGet = <ThrowOnError extends boolean = false>(options: Options<GetPasteRawPastesPasteIdRawGetData, ThrowOnError>) => (options.client ?? client).get<GetPasteRawPastesPasteIdRawGetResponses, GetPasteRawPastesPasteIdRawGetErrors, ThrowOnError>({ url: '/pastes/{paste_id}/raw', ...options });
+
+/**
+ * Create a new paste
+ *
+ * Create a new paste with the provided content and metadata.
  */
 export const createPastePastesPost = <ThrowOnError extends boolean = false>(options: Options<CreatePastePastesPostData, ThrowOnError>) => (options.client ?? client).post<CreatePastePastesPostResponses, CreatePastePastesPostErrors, ThrowOnError>({
     url: '/pastes',

@@ -3,7 +3,7 @@ import SimpleCard from "$lib/components/og/paste-preview.svelte";
 import type { RequestHandler } from "@sveltejs/kit";
 import { ApiService } from "$lib/api";
 import type { Paste } from "$lib/types";
-import { env } from "$env/dynamic/private";
+import { API_URL } from "$env/static/private";
 
 export const GET: RequestHandler = async ({ params, getClientAddress }) => {
   const client_ip = getClientAddress();
@@ -16,8 +16,8 @@ export const GET: RequestHandler = async ({ params, getClientAddress }) => {
     title = "Paste not found";
     content = "No such paste";
   } else {
-    const response = await ApiService.getPastePastesPasteIdGet({
-      baseUrl: env.API_BASE_URL,
+    const response = await ApiService.getPasteByUuidPastesPasteIdGet({
+      baseUrl: API_URL,
       path: {
         paste_id: id,
       },

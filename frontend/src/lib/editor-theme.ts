@@ -1,79 +1,65 @@
 import { EditorView } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
-import type { Extension } from "@codemirror/state";
 
-const BACKGROUND = "#171717";
-const FOREGROUND = "#e5e5e5";
-const ACCENT_BLUE = "#005ff1";
-const SUBTLE_GREY = "#3a3a3a";
-const SELECTION = "#a1a1a1";
+export const customHighlight = HighlightStyle.define([
+  { tag: t.keyword, color: "#c084fc", fontWeight: "bold" },
+  { tag: t.self, color: "#f87171" },
+  { tag: t.modifier, color: "#c084fc" },
 
-const KEYWORD = "#ff52f9";
-const COMMENT = "#00afc3";
-const STRING = "#8099ff";
-const NUMBER = ACCENT_BLUE;
-const PROPERTY = "#00afc3";
+  { tag: t.function(t.variableName), color: "#38bdf8" },
+  {
+    tag: t.definition(t.function(t.variableName)),
+    color: "#7dd3fc",
+    fontWeight: "bold",
+  },
+  { tag: t.className, color: "#fbbf24" },
+  { tag: t.macroName, color: "#f472b6" },
 
-const highlightStyle = HighlightStyle.define([
-  { tag: t.keyword, color: KEYWORD, fontWeight: "bold" },
-  { tag: t.comment, color: COMMENT, fontStyle: "italic" },
-  { tag: t.string, color: STRING },
-  { tag: t.number, color: NUMBER },
-  { tag: t.propertyName, color: PROPERTY },
-  { tag: t.operator, color: KEYWORD },
-  { tag: t.variableName, color: FOREGROUND },
-  { tag: t.name, color: FOREGROUND },
+  { tag: t.variableName, color: "#e5e7eb" },
+  { tag: t.propertyName, color: "#818cf8" },
+  { tag: t.namespace, color: "#a78bfa" },
+
+  { tag: t.string, color: "#4ade80" },
+  { tag: t.docString, color: "#4ade80", fontStyle: "italic" },
+  { tag: t.number, color: "#fbbf24" },
+  { tag: t.bool, color: "#fbbf24" },
+  { tag: t.null, color: "#fbbf24" },
+
+  { tag: t.operator, color: "#22d3ee" },
+  { tag: t.punctuation, color: "#9ca3af" },
+  { tag: t.bracket, color: "#9ca3af" },
+
+  { tag: t.comment, color: "#6b7280", fontStyle: "italic" },
 ]);
 
-const theme = EditorView.theme(
+export const customTheme = EditorView.theme(
   {
     "&": {
-      color: FOREGROUND,
-      backgroundColor: BACKGROUND,
-
-      fontFamily: '"Cascadia Code", sans-serif',
-      border: `1px solid ${SUBTLE_GREY}`,
-      borderRadius: "0.5rem",
-      height: "100%",
-      minHeight: "400px",
-      fontSize: "0.875rem",
+      color: "#e0e0e0",
+      backgroundColor: "#121212",
     },
-
-    ".cm-gutters": {
-      backgroundColor: BACKGROUND,
-      color: SUBTLE_GREY,
-      borderRight: "none",
-      paddingRight: "8px",
-    },
-
     ".cm-content": {
-      caretColor: ACCENT_BLUE,
+      caretColor: "#fff",
+      fontFamily: "Cascadia Code",
     },
-    ".cm-cursor, .cm-dropCursor": {
-      borderLeftColor: ACCENT_BLUE,
-    },
-
-    ".cm-selectionBackground": {
-      backgroundColor: SELECTION,
-    },
-
-    ".cm-activeLine": {
-      backgroundColor: "transparent",
+    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#fff" },
+    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection":
+      {
+        backgroundColor: "rgba(128, 153, 255, 0.2) !important",
+      },
+    ".cm-gutters": {
+      backgroundColor: "#121212",
+      color: "#4b5563",
+      border: "none",
     },
     ".cm-activeLineGutter": {
-      backgroundColor: "transparent",
-      color: SELECTION,
+      backgroundColor: "#1e1e1e",
+      color: "#e0e0e0",
     },
-
-    ".cm-placeholder": {
-      color: SUBTLE_GREY,
+    ".cm-activeLine": {
+      backgroundColor: "rgba(128, 153, 255, 0.1)",
     },
   },
   { dark: true },
 );
-
-export const editorTheme: Extension[] = [
-  theme,
-  syntaxHighlighting(highlightStyle),
-];

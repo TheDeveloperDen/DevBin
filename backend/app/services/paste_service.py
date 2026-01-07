@@ -1,179 +1,198 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import hashlib
 import logging
 import shutil
 import uuid
-from datetime import datetime, timezone
-from os import path
+from collections.abc import Coroutine
+from datetime import UTC, datetime
 from pathlib import Path
 
-import aiofiles
-from aiofiles import os
 from fastapi import HTTPException
 from pydantic import UUID4
-from sqlalchemy import select, delete, or_
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-from app.api.dto.paste_dto import CreatePaste, PasteResponse, PasteContentLanguage
+from app.api.dto.paste_dto import (
+    CreatePaste,
+    CreatePasteResponse,
+    EditPaste,
+    LegacyPasteResponse,
+    PasteContentLanguage,
+    PasteResponse,
+)
 from app.api.dto.user_meta_data import UserMetaData
 from app.config import config
 from app.db.models import PasteEntity
+from app.services.cleanup_service import CleanupService
+from app.storage import StorageClient
+from app.utils.active_pastes_counter import get_active_pastes_counter
+from app.utils.metrics import (
+    compressed_pastes,
+    paste_operations,
+    paste_size,
+    storage_operations,
+)
+from app.utils.token_utils import hash_token, is_token_hashed, verify_token
 
 
 class PasteService:
-    def __init__(self, session: sessionmaker,
-                 paste_base_folder_path: str = ""):
-        self.session_maker = session
-        self.paste_base_folder_path = paste_base_folder_path  # if it is in a subfolder of the project
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self._cleanup_task: asyncio.Task | None = None
-        self._lock_file = Path(".cleanup.lock")
+    def __init__(
+        self,
+        session: sessionmaker[AsyncSession],
+        cleanup_service: CleanupService,
+        storage_client: StorageClient,
+    ):
+        self.session_maker: sessionmaker[AsyncSession] = session
+        self.storage_client: StorageClient = storage_client
+        self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
+        self._cleanup_task: asyncio.Task[Coroutine[None, None, None]] | None = None
+        self._lock_file: Path = Path(".cleanup.lock")
+        self._cleanup_service: CleanupService = cleanup_service
+        self._storage_backend_name: str = self._get_storage_backend_name()
 
-    def start_cleanup_worker(self):
-        """Start the background cleanup worker"""
-        self.logger.info("Starting cleanup worker")
-        if self._cleanup_task is not None or self._lock_file.exists() is not None:
-            return  # Already running
-        self._acquire_lock()
-        self._cleanup_task = asyncio.create_task(self._cleanup_loop())
-        self.logger.info("Background cleanup worker started")
+    def _get_storage_backend_name(self) -> str:
+        """Get storage backend name for metrics labels."""
+        class_name = self.storage_client.__class__.__name__
+        if "Local" in class_name:
+            return "local"
+        elif "S3" in class_name:
+            return "s3"
+        elif "Minio" in class_name or "MinIO" in class_name:
+            return "minio"
+        return "unknown"
 
-    async def stop_cleanup_worker(self):
-        """Stop the background cleanup worker"""
-        if self._cleanup_task is not None:
-            self._cleanup_task.cancel()
-            try:
-                await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
-            self._cleanup_task = None
-            self._release_lock()
-            self.logger.info("Background cleanup worker stopped")
+    async def _read_content(self, paste_path: str, is_compressed: bool = False) -> str | None:
+        """
+        Read paste content, handling decompression if needed.
 
-    async def _cleanup_loop(self):
-        """Main cleanup loop that runs every 10 minutes"""
-        while True:
-            self._touch_lock()
-            try:
-                logging.info("Cleaning up expired pastes")
-                # Try to acquire lock (only one worker can run cleanup)
-                await self._cleanup_expired_pastes()
+        Args:
+            paste_path: Storage key for the paste
+            is_compressed: Whether the content is compressed
 
-                # Wait 5 minutes before next run
-                await asyncio.sleep(300)
-            except Exception as exc:
-                self.logger.error("Error in cleanup loop: %s", exc)
-                await asyncio.sleep(60)  # Retry after 1 minute on error
-
-    def _touch_lock(self):
-        self._lock_file.touch()
-
-    def _acquire_lock(self) -> bool:
-        """Try to acquire cleanup lock"""
+        Returns:
+            Decompressed content string or None on error
+        """
         try:
-            if self._lock_file.exists():
-                # Check if lock is stale (older than 15 minutes)
-                lock_time = self._lock_file.stat().st_mtime
-                if datetime.now().timestamp() - lock_time < 900:  # 15 minutes
-                    return False  # Lock still valid
+            data = await self.storage_client.get_object(paste_path)
+            if data is None:
+                self.logger.error("Paste content not found: %s", paste_path)
+                storage_operations.labels(operation="get", backend=self._storage_backend_name, status="not_found").inc()
+                return None
 
-            # Create or update lock file
-            self._touch_lock()
-            logging.info("Cleanup lock acquired")
-            return True
-        except Exception as exc:
-            self.logger.error("Failed to acquire cleanup lock: %s", exc)
-            return False
+            storage_operations.labels(operation="get", backend=self._storage_backend_name, status="success").inc()
 
-    def _release_lock(self):
-        """Release cleanup lock"""
-        try:
-            if self._lock_file.exists():
-                self._lock_file.unlink()
-        except Exception as exc:
-            self.logger.error("Failed to release cleanup lock: %s", exc)
+            if is_compressed:
+                from app.utils.compression import CompressionError, decompress_content
 
-    async def _cleanup_expired_pastes(self):
-        """Remove expired pastes and their files"""
-        from app.api.subroutes.pastes import cache
-        try:
-            async with self.session_maker() as session:
-                current_time = datetime.now()
-                # Get expired paste IDs
-                stmt = select(PasteEntity.id, PasteEntity.content_path).where(
-                    PasteEntity.expires_at < current_time
-                )
-                result = await session.execute(stmt)
-                expired_pastes = result.fetchall()
-
-                if not expired_pastes:
-                    return
-
-                error: bool = False
-                # Delete from database and Files
-                for paste_id, content_path in expired_pastes:
-
-                    await cache.delete(paste_id)
-
-                    delete_stmt = delete(PasteEntity).where(
-                        PasteEntity.id == paste_id
-                    )
-                    file_path = Path(self.paste_base_folder_path) / content_path
-                    try:
-                        if file_path.exists():
-                            file_path.unlink()
-                        await session.execute(delete_stmt)
-                        await session.commit()
-                    except Exception as exc:
-                        error = True
-                        self.logger.error("Failed to remove file %s: %s", file_path, exc)
-                if not error:
-                    delete_stmt = delete(PasteEntity).where(
-                        PasteEntity.expires_at < current_time
-                    )
-                    await session.execute(delete_stmt)
-                    await session.commit()
-        except Exception as exc:
-            self.logger.error("Failed to cleanup expired pastes: %s", exc)
-
-    async def _read_content(self, paste_path: str) -> str | None:
-        try:
-            async with aiofiles.open(paste_path) as f:
-                return await f.read()
+                try:
+                    return decompress_content(data)
+                except CompressionError as exc:
+                    self.logger.error("Failed to decompress paste at %s: %s", paste_path, exc)
+                    return None
+            else:
+                return data.decode("utf-8")
         except Exception as exc:
             self.logger.error("Failed to read paste content: %s", exc)
+            storage_operations.labels(operation="get", backend=self._storage_backend_name, status="error").inc()
             return None
 
-    async def _save_content(self, paste_id: str, content: str) -> str | None:
-        try:
-            base_file_path = path.join("pastes", f"{paste_id}.txt")
-            file_path = path.join(self.paste_base_folder_path, base_file_path)
-            await os.makedirs(path.dirname(file_path), exist_ok=True)
-            async with aiofiles.open(file_path, "w") as f:
-                await f.write(content)
+    async def _save_content(self, paste_id: str, content: str) -> tuple[str, int, bool, int | None] | None:
+        """
+        Save paste content, optionally compressed.
 
-            return base_file_path
+        Returns:
+            Tuple of (content_path, content_size, is_compressed, original_size) or None
+        """
+        try:
+            from app.utils.compression import (
+                CompressionError,
+                compress_content,
+                should_compress,
+            )
+
+            # Determine if we should compress
+            use_compression = False
+            compressed_data = None
+            original_size = len(content.encode("utf-8"))
+
+            if config.COMPRESSION_ENABLED and should_compress(content, config.COMPRESSION_THRESHOLD_BYTES):
+                try:
+                    compressed_data, original_size = compress_content(content, config.COMPRESSION_LEVEL)
+                    # Only use compression if it actually saves space
+                    if len(compressed_data) < original_size:
+                        use_compression = True
+                        self.logger.info(
+                            "Compressed paste %s: %d -> %d bytes (%.1f%% reduction)",
+                            paste_id,
+                            original_size,
+                            len(compressed_data),
+                            100 * (1 - len(compressed_data) / original_size),
+                        )
+                    else:
+                        self.logger.debug(
+                            "Compression not beneficial for paste %s, storing uncompressed",
+                            paste_id,
+                        )
+                except CompressionError as exc:
+                    self.logger.warning(
+                        "Compression failed for paste %s, storing uncompressed: %s",
+                        paste_id,
+                        exc,
+                    )
+
+            # Prepare storage key
+            storage_key = f"pastes/{paste_id}.txt"
+
+            # Write content (compressed or uncompressed)
+            if use_compression and compressed_data:
+                await self.storage_client.put_object(storage_key, compressed_data)
+                storage_operations.labels(operation="put", backend=self._storage_backend_name, status="success").inc()
+                content_size = len(compressed_data)
+                return storage_key, content_size, True, original_size
+            else:
+                await self.storage_client.put_object(storage_key, content.encode("utf-8"))
+                storage_operations.labels(operation="put", backend=self._storage_backend_name, status="success").inc()
+                content_size = original_size
+                return storage_key, content_size, False, None
+
         except Exception as exc:
             self.logger.error("Failed to save paste content: %s", exc)
+            storage_operations.labels(operation="put", backend=self._storage_backend_name, status="error").inc()
             return None
 
-    async def _remove_file(self, paste_path: str):
+    async def _remove_file(self, storage_key: str):
+        """Remove paste file from storage."""
         try:
-            await os.remove(paste_path)
+            await self.storage_client.delete_object(storage_key)
+            storage_operations.labels(operation="delete", backend=self._storage_backend_name, status="success").inc()
         except Exception as exc:
-            self.logger.error("Failed to remove file %s: %s", paste_path, exc)
+            self.logger.error("Failed to remove file %s: %s", storage_key, exc)
+            storage_operations.labels(operation="delete", backend=self._storage_backend_name, status="error").inc()
 
     def verify_storage_limit(self):
+        """Verify storage limit (only applicable for local storage)."""
         try:
+            # Only check disk usage for local storage
+            from app.storage.local_storage import LocalStorageClient
+
+            if not isinstance(self.storage_client, LocalStorageClient):
+                # Skip storage limit check for cloud storage (S3, MinIO)
+                return True
+
             # Get the total, used, and free disk space for the base folder path
-            total, used, free = shutil.disk_usage(self.paste_base_folder_path)
-            # Check if we have enough free space (let's say 100MB minimum)
-            min_free_space = config.MIN_STORAGE_MB * 1024 * 1024  # 100 MB in bytes
+            total, used, free = shutil.disk_usage(self.storage_client.base_path)
+            # Check if we have enough free space
+            min_free_space = config.MIN_STORAGE_MB * 1024 * 1024
             if free < min_free_space:
                 self.logger.warning(
                     "Not enough disk space available. Total: %d, Used: %d, Free: %d",
-                    total, used, free
+                    total,
+                    used,
+                    free,
                 )
                 return False
 
@@ -183,16 +202,42 @@ class PasteService:
             # If we can't check, better to allow the operation to proceed
             return True
 
+    async def get_legacy_paste_by_name(self, paste_id: str) -> LegacyPasteResponse | None:
+        """Get legacy Hastebin-format paste."""
+        paste_md5: str = hashlib.md5(paste_id.encode()).hexdigest()  # noqa: S324 - MD5 used for legacy key format, not security
+        storage_key = f"hastebin/{paste_md5}"
+
+        try:
+            data = await self.storage_client.get_object(storage_key)
+            if data is not None:
+                content = data.decode("utf-8")
+                return LegacyPasteResponse(content=content)
+        except Exception as exc:
+            self.logger.debug("Legacy paste not found: %s", exc)
+        return None
+
     async def get_paste_by_id(self, paste_id: UUID4) -> PasteResponse | None:
         async with self.session_maker() as session:
-            stmt = select(PasteEntity).where(PasteEntity.id == paste_id, or_(PasteEntity.expires_at > datetime.now(),
-                                                                             PasteEntity.expires_at.is_(None))).limit(1)
+            stmt = (
+                select(PasteEntity)
+                .where(
+                    PasteEntity.id == paste_id,
+                    or_(
+                        PasteEntity.expires_at > datetime.now(tz=UTC),
+                        PasteEntity.expires_at.is_(None),
+                    ),
+                )
+                .limit(1)
+            )
             result: PasteEntity | None = (await session.execute(stmt)).scalar_one_or_none()
             if result is None:
+                paste_operations.labels(operation="get", status="not_found").inc()
                 return None
             content = await self._read_content(
-                path.join(self.paste_base_folder_path, result.content_path),
+                result.content_path,
+                is_compressed=result.is_compressed,
             )
+            paste_operations.labels(operation="get", status="success").inc()
             return PasteResponse(
                 id=result.id,
                 title=result.title,
@@ -200,28 +245,173 @@ class PasteService:
                 content_language=PasteContentLanguage(result.content_language),
                 created_at=result.created_at,
                 expires_at=result.expires_at,
+                last_updated_at=result.last_updated_at,
             )
 
-    async def create_paste(self, paste: CreatePaste, user_data: UserMetaData) -> PasteResponse:
+    async def edit_paste(self, paste_id: UUID4, edit_paste: EditPaste, edit_token: str) -> PasteResponse | None:
+        async with self.session_maker() as session:
+            stmt = (
+                select(PasteEntity)
+                .where(
+                    PasteEntity.id == paste_id,
+                    or_(
+                        PasteEntity.expires_at > datetime.now(tz=UTC),
+                        PasteEntity.expires_at.is_(None),
+                    ),
+                )
+                .limit(1)
+            )
+            result: PasteEntity | None = (await session.execute(stmt)).scalar_one_or_none()
 
+            if result is None:
+                paste_operations.labels(operation="edit", status="not_found").inc()
+                return None
+
+            # Verify token - support both hashed (new) and plaintext (legacy)
+            token_valid = False
+            if is_token_hashed(result.edit_token):
+                # New hashed token
+                token_valid = verify_token(edit_token, result.edit_token)
+            else:
+                # Legacy plaintext token (during migration period)
+                token_valid = result.edit_token == edit_token
+                if token_valid:
+                    # Opportunistically upgrade to hashed token
+                    result.edit_token = hash_token(edit_token)
+                    self.logger.info("Upgraded edit token to hashed format for paste %s", paste_id)
+
+            if not token_valid:
+                paste_operations.labels(operation="edit", status="unauthorized").inc()
+                return None
+
+            # Update only the fields that are provided (not None)
+            if edit_paste.title is not None:  # Using ellipsis as sentinel for "not provided"
+                result.title = edit_paste.title
+            if edit_paste.content_language is not None:
+                result.content_language = edit_paste.content_language.value
+            if edit_paste.is_expires_at_set():
+                result.expires_at = edit_paste.expires_at
+
+            # Handle content update separately
+            if edit_paste.content is not None:
+                save_result = await self._save_content(str(paste_id), edit_paste.content)
+                if not save_result:
+                    return None
+                (
+                    new_content_path,
+                    content_size,
+                    is_compressed,
+                    original_size,
+                ) = save_result
+                result.content_path = new_content_path
+                result.content_size = content_size
+                result.is_compressed = is_compressed
+                result.original_size = original_size
+
+            result.last_updated_at = datetime.now(tz=UTC)
+
+            await session.commit()
+            await session.refresh(result)
+
+            # Re-read content if updated
+            content = (
+                edit_paste.content
+                if edit_paste.content is not None
+                else await self._read_content(
+                    result.content_path,
+                    is_compressed=result.is_compressed,
+                )
+            )
+
+            paste_operations.labels(operation="edit", status="success").inc()
+            return PasteResponse(
+                id=result.id,
+                title=result.title,
+                content=content,
+                content_language=PasteContentLanguage(result.content_language),
+                expires_at=result.expires_at,
+                created_at=result.created_at,
+                last_updated_at=result.last_updated_at,
+            )
+
+    async def delete_paste(self, paste_id: UUID4, delete_token: str) -> bool:
+        async with self.session_maker() as session:
+            stmt = (
+                select(PasteEntity)
+                .where(
+                    PasteEntity.id == paste_id,
+                    or_(
+                        PasteEntity.expires_at > datetime.now(tz=UTC),
+                        PasteEntity.expires_at.is_(None),
+                    ),
+                )
+                .limit(1)
+            )
+            result: PasteEntity | None = (await session.execute(stmt)).scalar_one_or_none()
+
+            if result is None:
+                paste_operations.labels(operation="delete", status="not_found").inc()
+                return False
+
+            # Verify token - support both hashed (new) and plaintext (legacy)
+            token_valid = False
+            if is_token_hashed(result.delete_token):
+                # New hashed token
+                token_valid = verify_token(delete_token, result.delete_token)
+            else:
+                # Legacy plaintext token (during migration period)
+                token_valid = result.delete_token == delete_token
+                # No need to upgrade here since we're deleting anyway
+
+            if not token_valid:
+                paste_operations.labels(operation="delete", status="unauthorized").inc()
+                return False
+
+            # Remove file (ignore errors - file might already be deleted)
+            with contextlib.suppress(Exception):
+                await self._remove_file(result.content_path)
+
+            # Delete from database
+            await session.delete(result)
+            await session.commit()
+            paste_operations.labels(operation="delete", status="success").inc()
+            counter = get_active_pastes_counter()
+            if counter:
+                counter.dec()
+            return True
+
+    async def create_paste(self, paste: CreatePaste, user_data: UserMetaData) -> PasteResponse:
         if not self.verify_storage_limit():
+            paste_operations.labels(operation="create", status="storage_limit").inc()
             raise HTTPException(
                 status_code=500,
                 detail="Storage limit reached, contact administration",
-
             )
 
         paste_id = uuid.uuid4()
-        paste_path = await self._save_content(
-            str(paste_id), paste.content,
+        save_result = await self._save_content(
+            str(paste_id),
+            paste.content,
         )
-        if not paste_path:
+        if not save_result:
+            paste_operations.labels(operation="create", status="error").inc()
             raise HTTPException(
                 status_code=500,
                 detail="Failed to save paste content",
                 headers={"Retry-After": "60"},
             )
+
+        paste_path, content_size, is_compressed, original_size = save_result
+
         try:
+            # Generate plaintext tokens to return to user
+            edit_token_plaintext = uuid.uuid4().hex
+            delete_token_plaintext = uuid.uuid4().hex
+
+            # Hash tokens for storage
+            edit_token_hashed = hash_token(edit_token_plaintext)
+            delete_token_hashed = hash_token(delete_token_plaintext)
+
             async with self.session_maker() as session:
                 entity: PasteEntity = PasteEntity(
                     id=paste_id,
@@ -229,28 +419,44 @@ class PasteService:
                     content_path=paste_path,
                     content_language=paste.content_language.value,
                     expires_at=paste.expires_at,
-                    creator_ip=user_data.ip,
+                    creator_ip=str(user_data.ip),
                     creator_user_agent=user_data.user_agent,
-                    content_size=len(paste.content),
+                    content_size=content_size,
+                    is_compressed=is_compressed,
+                    original_size=original_size,
+                    edit_token=edit_token_hashed,
+                    delete_token=delete_token_hashed,
                 )
                 session.add(entity)
                 await session.commit()
                 await session.refresh(entity)
 
-                return PasteResponse(
+                # Record metrics on successful create
+                paste_operations.labels(operation="create", status="success").inc()
+                paste_size.observe(original_size if original_size else content_size)
+                counter = get_active_pastes_counter()
+                if counter:
+                    counter.inc()
+                if is_compressed:
+                    compressed_pastes.inc()
+
+                return CreatePasteResponse(
                     id=entity.id,
                     title=entity.title,
                     content=paste.content,
                     content_language=PasteContentLanguage(entity.content_language),
                     created_at=entity.created_at,
+                    last_updated_at=entity.last_updated_at,
                     expires_at=entity.expires_at,
+                    edit_token=edit_token_plaintext,
+                    delete_token=delete_token_plaintext,
                 )
         except Exception as exc:
             self.logger.error("Failed to create paste: %s", exc)
-            await session.rollback()
             await self._remove_file(paste_path)
+            paste_operations.labels(operation="create", status="error").inc()
             raise HTTPException(
                 status_code=500,
                 detail="Failed to create paste",
                 headers={"Retry-After": "60"},
-            )
+            ) from exc

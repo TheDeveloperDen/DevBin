@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "$env/static/private";
+import { API_URL } from "$env/static/private";
 import { ApiService } from "$lib/api";
 import type { Paste } from "$lib/types";
 import { env } from "$env/dynamic/private";
@@ -8,8 +8,8 @@ export async function load({ params, getClientAddress }) {
   const { id: paste_id } = params;
 
   try {
-    const response = await ApiService.getPastePastesPasteIdGet({
-      baseUrl: env.API_BASE_URL,
+    const response = await ApiService.getPasteByUuidPastesPasteIdGet({
+      baseUrl: env.API_URL,
       path: {
         paste_id: paste_id,
       },

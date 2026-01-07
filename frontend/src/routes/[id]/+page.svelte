@@ -7,6 +7,7 @@
         type LanguageType,
     } from "$lib/editor-lang.js";
     import Copy from "$lib/icons/copy.svelte";
+    import { yaml } from "@codemirror/lang-yaml";
 
     let { data } = $props();
     const MESSAGE_CLEAR_TIMEOUT = 1500;
@@ -93,12 +94,6 @@
             </div>
         </div>
         <div class="gap-2 text-end mb-2"></div>
-        <CodeEditor
-            value={data?.content}
-            extensions={[
-                aura,
-                getLanguageExtension(data?.file_type || "default"),
-            ]}
-        />
+        <CodeEditor value={data?.content} language={data?.file_type} />
     {/if}
 </div>

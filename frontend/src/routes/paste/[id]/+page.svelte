@@ -1,10 +1,9 @@
 <script lang="ts">
     import { page } from "$app/state";
     import CodeEditor from "$lib/components/code-editor.svelte";
-    import { getLanguageExtension } from "$lib/editor-lang.js";
+    import { getLanguageExtension, LanguageType } from "$lib/editor-lang.js";
     import Copy from "$lib/icons/copy.svelte";
     import { relativeDate } from "$lib/utils/date";
-    import { aura } from "@uiw/codemirror-theme-aura";
 
     let { data } = $props();
     const MESSAGE_CLEAR_TIMEOUT = 1500;
@@ -102,7 +101,10 @@
             <div
                 class="flex-1 overflow-y-scroll border-2 rounded-lg border-neutral-400 p-2"
             >
-                <p>{data.content}</p>
+                <CodeEditor
+                    value={data?.content}
+                    language={data?.content_language as LanguageType}
+                />
             </div>
         {/if}
     </div>
