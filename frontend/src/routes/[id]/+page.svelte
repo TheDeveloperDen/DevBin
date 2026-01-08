@@ -1,13 +1,11 @@
 <script lang="ts">
     import { page } from "$app/state";
     import CodeEditor from "$lib/components/code-editor.svelte";
-    import { aura } from "@uiw/codemirror-theme-aura";
     import {
         getLanguageExtension,
         type LanguageType,
     } from "$lib/editor-lang.js";
     import Copy from "$lib/icons/copy.svelte";
-    import { yaml } from "@codemirror/lang-yaml";
 
     let { data } = $props();
     const MESSAGE_CLEAR_TIMEOUT = 1500;

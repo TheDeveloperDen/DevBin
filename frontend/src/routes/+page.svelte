@@ -4,7 +4,6 @@
     import { goto } from "$app/navigation";
     import CodeEditor from "$lib/components/code-editor.svelte";
     import { getLanguageExtension } from "$lib/editor-lang";
-    import { aura } from "@uiw/codemirror-theme-aura";
 
     const ERROR_CLEAR_TIMEOUT = 2500;
     const MAX_PASTE_CONTENT_LENGTH = 10000;
@@ -101,7 +100,6 @@
                 name="content_language"
             >
                 <option value="plain_text">plaintext</option>
-                <option value="python">Python</option>
             </select>
             <p class="text-end">
                 {editorValue.trim()
