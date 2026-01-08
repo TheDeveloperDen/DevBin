@@ -51,7 +51,7 @@ COPY pyproject.toml uv.lock ./
 # --no-dev: Exclude development dependencies
 # --extra production: Include any production related dependencies (redis, aiocache etc...)
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-default-groups --extra production
+    uv sync --frozen --no-default-groups --extra production --extra migrations
 
 # ============================================
 # Stage 3: Runtime - Production Image
