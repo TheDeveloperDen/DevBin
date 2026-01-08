@@ -8,7 +8,17 @@ services:
       - "3000:3000"
     env_file:
       - .env
-    profiles: [ "dev_frontend" ]
+    profiles: ["dev_frontend"]
+    develop:
+      watch:
+        - path: ./src
+          target: /src
+          action: sync
+        - path: ./package.json
+          action: rebuild
+    networks:
+      - devbin_network
+
   devbin:
     env_file:
       - .env
@@ -21,13 +31,16 @@ services:
     depends_on:
       devbin_db:
         condition: service_healthy
-    profiles: [ "dev_backend" ]
+    profiles: ["dev_backend"]
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:${APP_PORT:-8000}/health" ]
+      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-8000}/health"]
       interval: 15s
       timeout: 5s
       start_period: 3s
       retries: 3
+    networks:
+      - devbin_network
+
   devbin_db:
     env_file:
       - .env
@@ -37,10 +50,16 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d postgres" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - devbin_network
 
 volumes:
   postgres_data:
+
+networks:
+  devbin_network:
+    driver: bridge

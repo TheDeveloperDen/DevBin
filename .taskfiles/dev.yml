@@ -5,7 +5,7 @@ tasks:
   up:
     desc: Start all development services
     cmds:
-      - "{{.COMPOSE_DEV}} --profile dev_frontend --profile dev_backend up -d --build"
+      - "{{.COMPOSE_DEV}} --profile dev_frontend --profile dev_backend up --build --watch"
 
   backend:
     desc: Start backend only (with database)
