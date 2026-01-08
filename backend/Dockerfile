@@ -21,11 +21,6 @@ RUN apt-get update && \
     curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Create non-root user and initialize /app with correct permissions
-RUN groupadd -g 10001 appuser && \
-    useradd -u 10001 -g appuser -m -s /bin/bash appuser && \
-    mkdir /app && chown appuser:appuser /app
-
 WORKDIR /app
 
 # ============================================
@@ -59,14 +54,14 @@ COPY --from=builder /usr/local/bin/uv /usr/local/bin/uvx /usr/local/bin/
 COPY --from=builder /app/.venv /app/.venv
 
 # Copy application code with correct ownership
-COPY --chown=appuser:appuser . .
+COPY . .
 
 # Overwrite config
-COPY --chown=appuser:appuser alembic.docker.ini alembic.ini
+COPY alembic.docker.ini alembic.ini
 
 # Create files directory
-RUN mkdir -p /app/files && chown appuser:appuser /app/files
-RUN mkdir -p /app/files/pastes && chown appuser:appuser /app/files/pastes
+RUN mkdir -p /app/files
+RUN mkdir -p /app/files/pastes
 
 # Switch to non-root user
 USER appuser
