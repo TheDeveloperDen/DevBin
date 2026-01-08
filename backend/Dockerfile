@@ -66,6 +66,7 @@ COPY --chown=appuser:appuser alembic.docker.ini alembic.ini
 
 # Create files directory
 RUN mkdir -p /app/files && chown appuser:appuser /app/files
+RUN mkdir -p /app/files/pastes && chown appuser:appuser /app/files/pastes
 
 # Switch to non-root user
 USER appuser
