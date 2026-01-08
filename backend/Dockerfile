@@ -63,9 +63,6 @@ COPY alembic.docker.ini alembic.ini
 RUN mkdir -p /app/files
 RUN mkdir -p /app/files/pastes
 
-# Switch to non-root user
-USER appuser
-
 # Environment variables
 ENV APP_PORT=8000 \
     APP_RELOAD=false \
