@@ -44,4 +44,12 @@
     .button-outline {
         @apply min-h-10 flex flex-row items-center p-2 outline-none rounded-lg border border-neutral-400 cursor-pointer hover:border-neutral-500 active:border-neutral-300;
     }
+
+    .button-danger {
+        @apply min-h-10 flex flex-row items-center p-2 outline-none rounded-lg bg-red-700 text-white cursor-pointer hover:bg-red-600 active:bg-red-400;
+    }
+
+    .button-ghost {
+        @apply min-h-10 flex flex-row items-center p-2 outline-none rounded-lg text-white cursor-pointer hover:bg-neutral-200/30 dark:hover:bg-neutral-600/30 active:bg-neutral-400/30;
+    }
 }
