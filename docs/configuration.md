@@ -121,6 +121,6 @@ Generate a secure token: `openssl rand -hex 32`
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `API_BASE_URL` | Backend API URL | `http://devbin:8000` |
+| `API_URL` | Backend API URL | `http://devbin:8000` |
 | `PORT` | Frontend port | `3000` |
 | `ORIGIN` | Frontend origin | `http://localhost:3000` |

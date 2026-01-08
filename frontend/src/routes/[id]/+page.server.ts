@@ -1,6 +1,5 @@
 import { ApiService } from "$lib/api/index.js";
 import type { LanguageType } from "$lib/editor-lang.js";
-import axios from "axios";
 import { env } from "$env/dynamic/private";
 
 export async function load({ params, getClientAddress }) {
