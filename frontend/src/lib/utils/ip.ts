@@ -27,6 +27,5 @@ function getPublicIP(ip: string | null | undefined): string | null {
 export function getUserIpAddress(request: Request, getClientAddress: () => string) {
     return getPublicIP(request.headers.get("cf-connecting-ip")) ||
         getPublicIP(request.headers.get("x-real-ip")) ||
-        getPublicIP(request.headers.get("x-forwarded-for")?.split(",")[0].trim()) ||
         getClientAddress();
 }
