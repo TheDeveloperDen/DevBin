@@ -205,7 +205,7 @@ class PasteService:
     async def get_legacy_paste_by_name(self, paste_id: str) -> LegacyPasteResponse | None:
         """Get legacy Hastebin-format paste."""
         paste_md5: str = hashlib.md5(paste_id.encode()).hexdigest()  # noqa: S324 - MD5 used for legacy key format, not security
-        storage_key = f"hastebin/{paste_md5}"
+        storage_key = f"hastebin/{paste_md5}.txt"
 
         try:
             data = await self.storage_client.get_object(storage_key)
