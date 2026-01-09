@@ -5,7 +5,7 @@ A lightweight pastebin service built with FastAPI and Svelte.
 ## Quick Start
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/TheDeveloperDen/DevBin.git
 cd DevBin
 cp .env.example .env      # Configure as needed
 task dev:up               # Start all services
