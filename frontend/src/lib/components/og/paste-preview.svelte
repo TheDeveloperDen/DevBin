@@ -1,31 +1,15 @@
 <script lang="ts">
-    let data = $props();
-
-    let { title, content } = data;
-
-    const MAX_LENGTH = 300;
-    const truncatedContent =
-        content.length > MAX_LENGTH
-            ? content.substring(0, MAX_LENGTH) + "..."
-            : content;
+    let { title = "Untitled.ts" } = $props();
 </script>
 
-<div
-    class="flex flex-col justify-center items-center w-full relative h-full bg-neutral-900 p-[50px] font-sans"
->
-    <div class="w-full flex justify-center mb-2">
-        <h1 class="text-white text-6xl">
-            {title}
-        </h1>
-    </div>
-
+<div class="flex flex-col w-full h-full bg-[#121212] font-sans">
     <div
-        class="flex flex-row justify-start items-center w-full overflow-hidden pl-5"
+        class="flex items-center w-full h-24 px-10 bg-[#252525] border-b border-[#333]"
     >
-        <p
-            class="text-neutral-500 text-3xl text-left leading-tight overflow-hidden"
-        >
-            {truncatedContent}
-        </p>
+        <div class="w-4 h-4 rounded-full bg-[#ff5f56] mr-2"></div>
+        <div class="w-4 h-4 rounded-full bg-[#ffbd2e] mr-2"></div>
+        <div class="w-4 h-4 rounded-full bg-[#27c93f] mr-10"></div>
+
+        <span class="text-[#858585] text-2xl tracking-tight">{title}</span>
     </div>
 </div>
