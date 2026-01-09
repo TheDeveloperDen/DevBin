@@ -54,7 +54,7 @@
     <meta property="og:title" content={`DevBin | ${data.title}`} />
     <meta
         property="og:image"
-        content={page.url.origin + `/paste/${page.params.id}/preview.png`}
+        content={page.url.origin + `/paste/${data.id}/preview.png`}
     />
 </svelte:head>
 
@@ -139,54 +139,56 @@
                             <Copy />
                         </div>
                     </button>
-                    <div class:hidden={!deletePrompt}>
-                        <p>Are you sure you want to delete this paste?</p>
-                    </div>
-                    <div class="flex flex-row gap-2">
-                        <!-- edit actions -->
-                        <button
-                            onclick={() => (isEditing = false)}
-                            class="button-primary"
-                            formaction="?/edit"
-                            class:hidden={!isEditing}
-                        >
-                            Save
-                        </button>
-                        <button
-                            type={"button"}
-                            onclick={() => (isEditing = !isEditing)}
-                            class={`${isEditing ? "button-ghost" : "button-primary"}`}
-                            class:hidden={deletePrompt}
-                        >
-                            {#if isEditing}
-                                Cancel
-                            {:else}
-                                <Edit />
-                            {/if}
-                        </button>
+                    {#if data.edit_token && data.delete_token}
+                        <div class:hidden={!deletePrompt}>
+                            <p>Are you sure you want to delete this paste?</p>
+                        </div>
+                        <div class="flex flex-row gap-2">
+                            <!-- edit actions -->
+                            <button
+                                onclick={() => (isEditing = false)}
+                                class="button-primary"
+                                formaction="?/edit"
+                                class:hidden={!isEditing}
+                            >
+                                Save
+                            </button>
+                            <button
+                                type={"button"}
+                                onclick={() => (isEditing = !isEditing)}
+                                class={`${isEditing ? "button-ghost" : "button-primary"}`}
+                                class:hidden={deletePrompt}
+                            >
+                                {#if isEditing}
+                                    Cancel
+                                {:else}
+                                    <Edit />
+                                {/if}
+                            </button>
 
-                        <!-- delete actions -->
-                        <button
-                            onclick={() => (deletePrompt = true)}
-                            class="button-danger"
-                            formaction="?/delete"
-                            class:hidden={!deletePrompt}
-                        >
-                            Confirm
-                        </button>
-                        <button
-                            onclick={() => (deletePrompt = !deletePrompt)}
-                            class={`${deletePrompt ? "button-outline" : "button-danger"}`}
-                            type="button"
-                            class:hidden={isEditing}
-                        >
-                            {#if deletePrompt}
-                                Cancel
-                            {:else}
-                                <Delete />
-                            {/if}
-                        </button>
-                    </div>
+                            <!-- delete actions -->
+                            <button
+                                onclick={() => (deletePrompt = true)}
+                                class="button-danger"
+                                formaction="?/delete"
+                                class:hidden={!deletePrompt}
+                            >
+                                Confirm
+                            </button>
+                            <button
+                                onclick={() => (deletePrompt = !deletePrompt)}
+                                class={`${deletePrompt ? "button-outline" : "button-danger"}`}
+                                type="button"
+                                class:hidden={isEditing}
+                            >
+                                {#if deletePrompt}
+                                    Cancel
+                                {:else}
+                                    <Delete />
+                                {/if}
+                            </button>
+                        </div>
+                    {/if}
                 </div>
             </div>
             <div class="gap-2 text-end mb-2"></div>

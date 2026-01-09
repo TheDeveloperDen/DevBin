@@ -21,6 +21,7 @@
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@tailwindcss/vite": "^4.1.17",
     "@types/node": "^25.0.3",
+    "shiki": "^3.21.0",
     "svelte": "^5.43.8",
     "svelte-check": "^4.3.4",
     "tailwindcss": "^4.1.17",
@@ -50,6 +51,7 @@
     "codemirror": "^6.0.2",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
+    "sharp": "^0.34.5",
     "thememirror": "^2.0.1"
   }
 }

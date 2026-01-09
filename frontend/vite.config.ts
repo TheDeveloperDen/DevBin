@@ -6,7 +6,11 @@ import { sveltekitOG } from "@ethercorps/sveltekit-og/plugin";
 
 export default defineConfig({
   server: {
-    port: process.env.PORT || 3000,
+    port: parseInt(process.env.PORT || "3000"),
+    allowedHosts: [
+      "73e9cd75c0f1.ngrok-free.app",
+      "sustainability-odds-undo-knows.trycloudflare.com",
+    ],
   },
   build: {
     rollupOptions: {

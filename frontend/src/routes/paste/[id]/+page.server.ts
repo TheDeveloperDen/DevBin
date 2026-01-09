@@ -9,10 +9,19 @@ import { fail, redirect } from "@sveltejs/kit";
 export async function load({ params, request, getClientAddress, cookies }) {
   const client_ip = getUserIpAddress(request, getClientAddress);
   const { id: paste_id } = params;
+  let tokens: { edit_token: string; delete_token: string } = {
+    edit_token: "",
+    delete_token: "",
+  };
+  const storedTokens = cookies.get(paste_id);
 
-  const tokens: { edit_token: string; delete_token: string } = JSON.parse(
-    cookies.get(paste_id) || "",
-  );
+  if (storedTokens) {
+    try {
+      tokens = JSON.parse(cookies.get(paste_id) || "");
+    } catch (error) {
+      console.log("Error parsing token cookie:", error);
+    }
+  }
 
   try {
     const response = await ApiService.getPasteByUuidPastesPasteIdGet({
@@ -61,9 +70,23 @@ export const actions = {
     const data = await request.formData();
     const paste_id = data.get("id")?.toString() || "";
     const paste_content = data.get("content")?.toString() || "";
-    const tokens: { edit_token: string; delete_token: string } = JSON.parse(
-      cookies.get(paste_id) || "",
-    );
+    let tokens: { edit_token: string; delete_token: string } = {
+      edit_token: "",
+      delete_token: "",
+    };
+    const storedTokens = cookies.get(paste_id);
+
+    if (storedTokens) {
+      try {
+        tokens = JSON.parse(cookies.get(paste_id) || "");
+      } catch (error) {
+        console.log("Error parsing token cookie:", error);
+      }
+    } else {
+      return fail(400, {
+        error: "Missing edit token",
+      });
+    }
 
     const response = await ApiService.editPastePastesPasteIdPut({
       path: {
@@ -89,9 +112,25 @@ export const actions = {
   delete: async ({ cookies, request }) => {
     const data = await request.formData();
     const paste_id = data.get("id")?.toString() || "";
-    const tokens: { edit_token: string; delete_token: string } = JSON.parse(
-      cookies.get(paste_id) || "",
-    );
+
+    let tokens: { edit_token: string; delete_token: string } = {
+      edit_token: "",
+      delete_token: "",
+    };
+    const storedTokens = cookies.get(paste_id);
+
+    if (storedTokens) {
+      try {
+        tokens = JSON.parse(cookies.get(paste_id) || "");
+      } catch (error) {
+        console.log("Error parsing token cookie:", error);
+      }
+    } else {
+      return fail(400, {
+        error: "Missing delete token",
+      });
+    }
+
     const response = await ApiService.deletePastePastesPasteIdDelete({
       path: {
         paste_id,

@@ -40,10 +40,8 @@
 <svelte:head>
     <title>DevBin | {data.title}</title>
     <meta property="og:title" content={`DevBin | ${data.title}`} />
-    <meta
-        property="og:image"
-        content={page.url.origin + `/paste/${page.params.id}/preview.png`}
-    />
+    <meta property="og:image" content="/paste/{page.params.id}/preview.png" />
+    <meta name="twitter:card" content="summary_large_image" />
 </svelte:head>
 
 <div class="flex-col h-full flex">
