@@ -2,7 +2,7 @@
 
 A lightweight pastebin service built with FastAPI and Svelte.
 
-## Quick Start
+## Quick Development Start
 
 ```bash
 git clone https://github.com/TheDeveloperDen/DevBin.git
