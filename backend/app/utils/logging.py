@@ -1,8 +1,20 @@
 """Logging configuration utilities."""
 
 import logging
+import re
 import sys
 from typing import Literal
+
+
+class HealthcheckLogFilter(logging.Filter):
+    """Filter to suppress access logs for healthcheck endpoints."""
+
+    HEALTHCHECK_PATTERN = re.compile(r'"[A-Z]+\s+/(health|ready)(\?[^\s]*)?\s+HTTP/')
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Return False to drop healthcheck logs, True to keep others."""
+        message = record.getMessage()
+        return not self.HEALTHCHECK_PATTERN.search(message)
 
 
 def configure_logging(
@@ -59,6 +71,9 @@ def configure_logging(
     else:
         _configure_text_logging(numeric_level)
 
+    # Apply healthcheck log filter to uvicorn access logger
+    _configure_access_log_filter()
+
 
 def _configure_text_logging(level: int) -> None:
     """Configure standard text-based logging."""
@@ -76,3 +91,9 @@ def _configure_text_logging(level: int) -> None:
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("asyncio").setLevel(logging.WARNING)
+
+
+def _configure_access_log_filter() -> None:
+    """Add filter to suppress healthcheck endpoint logs from uvicorn access logs."""
+    uvicorn_access_logger = logging.getLogger("uvicorn.access")
+    uvicorn_access_logger.addFilter(HealthcheckLogFilter())
