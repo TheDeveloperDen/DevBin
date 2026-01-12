@@ -31,6 +31,9 @@ def configure_logging(
     # Convert string level to logging level
     numeric_level = getattr(logging, level.upper(), logging.INFO)
 
+    # Set root logger level explicitly to ensure all child loggers respect it
+    logging.getLogger().setLevel(numeric_level)
+
     if log_format == "json":
         try:
             import structlog
@@ -59,10 +62,15 @@ def configure_logging(
                 format="%(message)s",
                 stream=sys.stdout,
                 level=numeric_level,
+                force=True,
             )
 
             # Wrap standard library loggers with structlog
             structlog.stdlib.recreate_defaults(log_level=numeric_level)
+
+            # Configure uvicorn loggers for JSON format
+            formatter = logging.Formatter("%(message)s")
+            _configure_uvicorn_loggers(numeric_level, formatter)
 
         except ImportError:
             # Fallback to text format if structlog not installed
@@ -71,29 +79,36 @@ def configure_logging(
     else:
         _configure_text_logging(numeric_level)
 
-    # Apply healthcheck log filter to uvicorn access logger
-    _configure_access_log_filter()
-
 
 def _configure_text_logging(level: int) -> None:
     """Configure standard text-based logging."""
     # Custom format with timestamp, level, name, and message
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    date_format = "%Y-%m-%d %H:%M:%S"
 
     logging.basicConfig(
         format=log_format,
-        datefmt="%Y-%m-%d %H:%M:%S",
+        datefmt=date_format,
         stream=sys.stdout,
         level=level,
+        force=True,
     )
 
-    # Reduce noise from some verbose libraries
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("httpcore").setLevel(logging.WARNING)
-    logging.getLogger("asyncio").setLevel(logging.WARNING)
+    # Configure uvicorn loggers to use the same format
+    formatter = logging.Formatter(log_format, datefmt=date_format)
+    _configure_uvicorn_loggers(level, formatter)
 
 
-def _configure_access_log_filter() -> None:
-    """Add filter to suppress healthcheck endpoint logs from uvicorn access logs."""
-    uvicorn_access_logger = logging.getLogger("uvicorn.access")
-    uvicorn_access_logger.addFilter(HealthcheckLogFilter())
+def _configure_uvicorn_loggers(level: int, formatter: logging.Formatter) -> None:
+    """Configure uvicorn loggers to use consistent formatting."""
+    for logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        logger = logging.getLogger(logger_name)
+        logger.handlers.clear()
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logger.setLevel(level)
+        logger.propagate = False
+
+    # Add healthcheck filter to access logger
+    logging.getLogger("uvicorn.access").addFilter(HealthcheckLogFilter())

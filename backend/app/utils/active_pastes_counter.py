@@ -40,13 +40,13 @@ class ActivePastesCounter:
         """Initialize the counter from the database."""
         count = await self._get_count_from_db()
         active_pastes.set(count)
-        logger.info("Initialized active_pastes gauge to %d", count)
+        logger.debug("Initialized active_pastes gauge to %d", count)
 
     def start_refresh_task(self) -> None:
         """Start the periodic refresh task."""
         if self._refresh_task is None:
             self._refresh_task = asyncio.create_task(self._refresh_loop())
-            logger.info("Started active_pastes refresh task (interval: %ds)", REFRESH_INTERVAL_SECONDS)
+            logger.debug("Started active_pastes refresh task (interval: %ds)", REFRESH_INTERVAL_SECONDS)
 
     async def stop_refresh_task(self) -> None:
         """Stop the periodic refresh task."""
@@ -55,7 +55,7 @@ class ActivePastesCounter:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._refresh_task
             self._refresh_task = None
-            logger.info("Stopped active_pastes refresh task")
+            logger.debug("Stopped active_pastes refresh task")
 
     async def _refresh_loop(self) -> None:
         """Periodically refresh the gauge from the database."""
