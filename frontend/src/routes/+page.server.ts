@@ -9,7 +9,6 @@ import { getUserIpAddress } from "$lib/utils/ip";
 export const actions = {
   paste: async ({ request, getClientAddress, cookies }) => {
     const client_ip = getUserIpAddress(request, getClientAddress);
-
     const data = await request.formData();
     const title = data.get("title")?.toString() || "";
     const expires_at = data.get("expires_at")?.toString() as ExpiryValues;

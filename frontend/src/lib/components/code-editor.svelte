@@ -2,34 +2,65 @@
     import { onMount } from "svelte";
     import { EditorView } from "@codemirror/view";
     import { basicSetup } from "codemirror";
-    import { EditorState, StateEffect } from "@codemirror/state";
-    import { syntaxHighlighting } from "@codemirror/language";
-    import { customTheme, customHighlight } from "$lib/editor-theme";
+    import { EditorState } from "@codemirror/state";
+    import { customTheme } from "$lib/editor-theme";
     import { getLanguageExtension, type LanguageType } from "$lib/editor-lang";
+    import { shikiToCodeMirror, updateEffect } from "@cmshiki/shiki";
+    import { getSingletonHighlighter } from "shiki";
 
     let {
         value = $bindable(""),
         language = "yaml" as LanguageType,
         editable = false,
+        theme = "ayu-dark",
     } = $props();
 
     let editorRef: HTMLDivElement;
     let view: EditorView | null = null;
 
-    let extensionsConfig = $derived([
-        basicSetup,
-        ...getLanguageExtension(language),
-        customTheme,
-        syntaxHighlighting(customHighlight),
-        EditorState.readOnly.of(!editable),
-        EditorView.editable.of(editable),
-    ]);
+    async function getThemeBg(themeName: string): Promise<string> {
+        const highlighter = await getSingletonHighlighter({
+            themes: [themeName],
+            langs: [],
+        });
+        return highlighter.getTheme(themeName).bg ?? "#1e1e1e";
+    }
 
-    onMount(() => {
-        view = new EditorView({
+    function toShikiLang(lang: LanguageType): string | null {
+        return lang === "plain_text" ? null : lang;
+    }
+
+    async function buildEditor(doc: string) {
+        const shikiLang = toShikiLang(language);
+        const [bg, shikiResult] = await Promise.all([
+            getThemeBg(theme),
+            shikiLang
+                ? shikiToCodeMirror({
+                      lang: shikiLang,
+                      theme,
+                      engine: "javascript",
+                  })
+                : Promise.resolve(null),
+        ]);
+
+        const themeExtension = EditorView.theme({
+            "&": { backgroundColor: bg },
+            ".cm-gutters": { backgroundColor: bg, borderRight: "none" },
+            ".cm-activeLineGutter": { backgroundColor: `${bg}cc` },
+        });
+
+        return new EditorView({
             state: EditorState.create({
-                doc: value,
-                extensions: extensionsConfig,
+                doc,
+                extensions: [
+                    basicSetup,
+                    ...getLanguageExtension(language),
+                    customTheme(bg),
+                    themeExtension,
+                    ...(shikiResult ? [shikiResult.shiki] : []),
+                    EditorState.readOnly.of(!editable),
+                    EditorView.editable.of(editable),
+                ],
             }),
             parent: editorRef,
             dispatchTransactions(trs, view) {
@@ -40,25 +71,39 @@
                 }
             },
         });
+    }
+
+    onMount(async () => {
+        view = await buildEditor(value);
     });
 
     $effect(() => {
-        if (view) {
-            view.dispatch({
-                effects: StateEffect.reconfigure.of(extensionsConfig),
-            });
-        }
+        // reactive deps
+        const _lang = language;
+        const _theme = theme;
+        const _editable = editable;
+
+        if (!view) return;
+
+        (async () => {
+            const currentDoc = view!.state.doc.toString();
+            view!.destroy();
+            view = await buildEditor(currentDoc);
+        })();
     });
 </script>
 
-<div bind:this={editorRef} class="w-full h-full"></div>
+<div
+    bind:this={editorRef}
+    class="w-full h-full overflow-scroll"
+    spellcheck="false"
+></div>
 
 <style>
     :global(.cm-editor) {
         height: 100%;
         outline: none !important;
     }
-
     :global(.cm-scroller) {
         font-family: "Cascadia Code", "Fira Code", monospace !important;
     }

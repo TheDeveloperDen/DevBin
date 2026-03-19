@@ -196,7 +196,7 @@
                 <CodeEditor
                     bind:value={editorValue}
                     editable={(!!data?.edit_token && isEditing) || false}
-                    language={data?.content_language as LanguageType}
+                    language={"svelte"}
                 />
             </div>
         {/if}

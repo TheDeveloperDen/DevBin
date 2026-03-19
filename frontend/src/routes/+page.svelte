@@ -3,7 +3,7 @@
     import { enhance, applyAction } from "$app/forms";
     import { goto } from "$app/navigation";
     import CodeEditor from "$lib/components/code-editor.svelte";
-    import { getLanguageExtension } from "$lib/editor-lang";
+    import { getLanguageExtension, languageMap } from "$lib/editor-lang";
 
     const ERROR_CLEAR_TIMEOUT = 2500;
     const MAX_PASTE_CONTENT_LENGTH = 10000;
@@ -99,7 +99,9 @@
                 }}
                 name="content_language"
             >
-                <option value="plain_text">plaintext</option>
+                {#each Object.keys(languageMap) as lang}
+                    <option value={lang}>{lang}</option>
+                {/each}
             </select>
             <p class="text-end">
                 {editorValue.trim()
@@ -107,9 +109,11 @@
             </p>
         </div>
     </div>
-    <CodeEditor
-        bind:value={editorValue}
-        editable={true}
-        language={contentLanguage}
-    />
+    {#key contentLanguage}
+        <CodeEditor
+            bind:value={editorValue}
+            editable={true}
+            language={contentLanguage}
+        />
+    {/key}
 </form>
