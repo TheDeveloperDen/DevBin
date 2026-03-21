@@ -8,6 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.api.subroutes.auth import auth_route
 from app.api.subroutes.pastes import pastes_route
 from app.config import config
 from app.containers import Container
@@ -24,7 +25,9 @@ logger = logging.getLogger(__name__)
 metrics_security = HTTPBearer(auto_error=False, description="Metrics access token")
 
 
-def verify_metrics_token(credentials: HTTPAuthorizationCredentials | None = Depends(metrics_security)) -> None:
+def verify_metrics_token(
+    credentials: HTTPAuthorizationCredentials | None = Depends(metrics_security),
+) -> None:
     """
     Verify Bearer token for metrics endpoint.
 
@@ -86,4 +89,6 @@ async def metrics(_: None = Depends(verify_metrics_token)):
     )
 
 
+
 router.include_router(pastes_route)
+router.include_router(auth_route)

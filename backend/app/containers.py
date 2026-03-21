@@ -19,7 +19,9 @@ from app.utils.LRUMemoryCache import LRUMemoryCache
 
 
 @asynccontextmanager
-async def _engine_resource(db_url: str, echo: bool = False) -> AsyncIterator[AsyncEngine]:
+async def _engine_resource(
+    db_url: str, echo: bool = False
+) -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine(db_url, echo=echo, future=True)
     try:
         yield engine
@@ -154,8 +156,10 @@ class Container(containers.DeclarativeContainer):
         modules=[
             "app.api.routes",
             "app.api.subroutes.pastes",
+            "app.api.subroutes.auth",
             "app.services",
             "app.dependencies.db",
+            "app.dependencies.auth",
         ]
     )
 
@@ -213,4 +217,29 @@ class Container(containers.DeclarativeContainer):
         distributed_lock,
     )
 
-    paste_service = providers.Factory(PasteService, session_factory, cleanup_service, storage_client)
+    paste_service = providers.Factory(
+        PasteService, session_factory, cleanup_service, storage_client
+    )
+
+    # Auth services
+    from app.services.auth_service import AuthService
+    from app.services.email_service import EmailService
+    from app.services.jwt_service import JWTService
+
+    jwt_service = providers.Singleton(
+        JWTService,
+        config=config,
+    )
+
+    email_service = providers.Singleton(
+        EmailService,
+        config=config,
+    )
+
+    auth_service = providers.Factory(
+        AuthService,
+        session_factory=session_factory,
+        jwt_service=jwt_service,
+        email_service=email_service,
+        config=config,
+    )
