@@ -6,7 +6,12 @@ from dotenv import load_dotenv
 from pydantic import AfterValidator, Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings
 
-from app.utils.ip import TrustedHost, parse_ip_or_network, resolve_hostname, validate_ip_address
+from app.utils.ip import (
+    TrustedHost,
+    parse_ip_or_network,
+    resolve_hostname,
+    validate_ip_address,
+)
 
 # Rate limit format validation
 RATE_LIMIT_PATTERN = re.compile(r"^\d+/(second|minute|hour|day)$")
@@ -15,7 +20,9 @@ RATE_LIMIT_PATTERN = re.compile(r"^\d+/(second|minute|hour|day)$")
 def validate_rate_limit(value: str) -> str:
     """Validate rate limit format (e.g., '10/minute', '100/hour')."""
     if not RATE_LIMIT_PATTERN.match(value):
-        raise ValueError(f"Invalid rate limit format: '{value}'. Expected format: '<number>/<second|minute|hour|day>'")
+        raise ValueError(
+            f"Invalid rate limit format: '{value}'. Expected format: '<number>/<second|minute|hour|day>'"
+        )
     return value
 
 
@@ -28,11 +35,15 @@ load_dotenv()
 class Config(BaseSettings):
     # Environment
     ENVIRONMENT: Literal["dev", "staging", "prod"] = Field(
-        default="dev", validation_alias="APP_ENVIRONMENT", description="Application environment (dev, staging, prod)"
+        default="dev",
+        validation_alias="APP_ENVIRONMENT",
+        description="Application environment (dev, staging, prod)",
     )
 
     PORT: int = Field(default=8000, validation_alias="APP_PORT")
-    HOST: str = Field(default="0.0.0.0", validation_alias="APP_HOST")  # noqa: S104 - Bind to all interfaces for container deployment
+    HOST: str = Field(
+        default="0.0.0.0", validation_alias="APP_HOST"
+    )  # noqa: S104 - Bind to all interfaces for container deployment
 
     # DB
     DATABASE_URL: str = Field(
@@ -42,8 +53,12 @@ class Config(BaseSettings):
     SQLALCHEMY_ECHO: bool = Field(default=False, validation_alias="APP_SQLALCHEMY_ECHO")
 
     # Paste
-    MAX_CONTENT_LENGTH: int = Field(default=10000, validation_alias="APP_MAX_CONTENT_LENGTH")
-    BASE_FOLDER_PATH: str = Field(default="./files", validation_alias="APP_BASE_FOLDER_PATH")
+    MAX_CONTENT_LENGTH: int = Field(
+        default=10000, validation_alias="APP_MAX_CONTENT_LENGTH"
+    )
+    BASE_FOLDER_PATH: str = Field(
+        default="./files", validation_alias="APP_BASE_FOLDER_PATH"
+    )
     WORKERS: int | Literal[True] = Field(default=1, validation_alias="APP_WORKERS")
     METRICS_TOKEN: str | None = Field(
         default=None,
@@ -67,18 +82,32 @@ class Config(BaseSettings):
 
     # Cache backend configuration
     CACHE_TYPE: Literal["memory", "redis"] = Field(
-        default="memory", validation_alias="APP_CACHE_TYPE", description="Cache backend type (memory, redis)"
+        default="memory",
+        validation_alias="APP_CACHE_TYPE",
+        description="Cache backend type (memory, redis)",
     )
-    REDIS_HOST: str = Field(default="localhost", validation_alias="APP_REDIS_HOST", description="Redis server host")
-    REDIS_PORT: int = Field(default=6379, validation_alias="APP_REDIS_PORT", description="Redis server port")
-    REDIS_DB: int = Field(default=0, validation_alias="APP_REDIS_DB", description="Redis database number")
+    REDIS_HOST: str = Field(
+        default="localhost",
+        validation_alias="APP_REDIS_HOST",
+        description="Redis server host",
+    )
+    REDIS_PORT: int = Field(
+        default=6379, validation_alias="APP_REDIS_PORT", description="Redis server port"
+    )
+    REDIS_DB: int = Field(
+        default=0, validation_alias="APP_REDIS_DB", description="Redis database number"
+    )
     REDIS_PASSWORD: str | None = Field(
-        default=None, validation_alias="APP_REDIS_PASSWORD", description="Redis password (optional)"
+        default=None,
+        validation_alias="APP_REDIS_PASSWORD",
+        description="Redis password (optional)",
     )
 
     # Lock backend configuration
     LOCK_TYPE: Literal["file", "redis"] = Field(
-        default="file", validation_alias="APP_LOCK_TYPE", description="Lock backend type (file, redis)"
+        default="file",
+        validation_alias="APP_LOCK_TYPE",
+        description="Lock backend type (file, redis)",
     )
 
     # Rate limiting configuration
@@ -117,7 +146,12 @@ class Config(BaseSettings):
     RATELIMIT_CREATE_PASTE: RateLimit = Field(
         default="4/minute",
         validation_alias="APP_RATELIMIT_CREATE_PASTE",
-        description="Rate limit for POST /p/",
+        description="Rate limit for POST /p/ (anonymous users)",
+    )
+    RATELIMIT_CREATE_PASTE_AUTHENTICATED: RateLimit = Field(
+        default="20/minute",
+        validation_alias="APP_RATELIMIT_CREATE_PASTE_AUTHENTICATED",
+        description="Rate limit for POST /p/ (authenticated users)",
     )
     RATELIMIT_EDIT_PASTE: RateLimit = Field(
         default="4/minute",
@@ -165,29 +199,57 @@ class Config(BaseSettings):
         description="Minimum content size in bytes to trigger compression (2KB+ shows 30-40% compression ratio)",
     )
     COMPRESSION_LEVEL: int = Field(
-        default=6, validation_alias="APP_COMPRESSION_LEVEL", description="Gzip compression level (1-9, 6=balanced)"
+        default=6,
+        validation_alias="APP_COMPRESSION_LEVEL",
+        description="Gzip compression level (1-9, 6=balanced)",
     )
 
     # Storage settings
     STORAGE_TYPE: Literal["local", "s3", "minio"] = Field(
-        default="local", validation_alias="APP_STORAGE_TYPE", description="Storage backend type (local, s3, minio)"
+        default="local",
+        validation_alias="APP_STORAGE_TYPE",
+        description="Storage backend type (local, s3, minio)",
     )
-    S3_BUCKET_NAME: str = Field(default="", validation_alias="APP_S3_BUCKET_NAME", description="S3 bucket name")
-    S3_REGION: str = Field(default="us-east-1", validation_alias="APP_S3_REGION", description="AWS region for S3")
-    S3_ACCESS_KEY: str = Field(default="", validation_alias="APP_S3_ACCESS_KEY", description="S3 access key ID")
-    S3_SECRET_KEY: str = Field(default="", validation_alias="APP_S3_SECRET_KEY", description="S3 secret access key")
+    S3_BUCKET_NAME: str = Field(
+        default="", validation_alias="APP_S3_BUCKET_NAME", description="S3 bucket name"
+    )
+    S3_REGION: str = Field(
+        default="us-east-1",
+        validation_alias="APP_S3_REGION",
+        description="AWS region for S3",
+    )
+    S3_ACCESS_KEY: str = Field(
+        default="", validation_alias="APP_S3_ACCESS_KEY", description="S3 access key ID"
+    )
+    S3_SECRET_KEY: str = Field(
+        default="",
+        validation_alias="APP_S3_SECRET_KEY",
+        description="S3 secret access key",
+    )
     S3_ENDPOINT_URL: str | None = Field(
         default=None,
         validation_alias="APP_S3_ENDPOINT_URL",
         description="Custom S3 endpoint URL (for S3-compatible services)",
     )
     MINIO_ENDPOINT: str = Field(
-        default="", validation_alias="APP_MINIO_ENDPOINT", description="MinIO server endpoint (e.g., 'minio:9000')"
+        default="",
+        validation_alias="APP_MINIO_ENDPOINT",
+        description="MinIO server endpoint (e.g., 'minio:9000')",
     )
-    MINIO_ACCESS_KEY: str = Field(default="", validation_alias="APP_MINIO_ACCESS_KEY", description="MinIO access key")
-    MINIO_SECRET_KEY: str = Field(default="", validation_alias="APP_MINIO_SECRET_KEY", description="MinIO secret key")
+    MINIO_ACCESS_KEY: str = Field(
+        default="",
+        validation_alias="APP_MINIO_ACCESS_KEY",
+        description="MinIO access key",
+    )
+    MINIO_SECRET_KEY: str = Field(
+        default="",
+        validation_alias="APP_MINIO_SECRET_KEY",
+        description="MinIO secret key",
+    )
     MINIO_SECURE: bool = Field(
-        default=True, validation_alias="APP_MINIO_SECURE", description="Use HTTPS for MinIO connection"
+        default=True,
+        validation_alias="APP_MINIO_SECURE",
+        description="Use HTTPS for MinIO connection",
     )
 
     KEEP_DELETED_PASTES_TIME_HOURS: int = Field(
@@ -204,6 +266,172 @@ class Config(BaseSettings):
 
     RELOAD: bool = Field(default=False, validation_alias="APP_RELOAD")
     DEBUG: bool = Field(default=False, validation_alias="APP_DEBUG")
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Authentication Configuration
+    # ─────────────────────────────────────────────────────────────────────────────
+
+    # JWT Settings
+    JWT_SECRET_KEY: str = Field(
+        default="CHANGE_ME_IN_PRODUCTION_32_CHARS_MIN",
+        validation_alias="APP_JWT_SECRET_KEY",
+        description="Secret key for JWT token signing (minimum 32 characters)",
+    )
+    JWT_ALGORITHM: str = Field(
+        default="HS256",
+        validation_alias="APP_JWT_ALGORITHM",
+        description="JWT signing algorithm",
+    )
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
+        default=15,
+        validation_alias="APP_JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
+        description="Access token expiration time in minutes",
+    )
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = Field(
+        default=7,
+        validation_alias="APP_JWT_REFRESH_TOKEN_EXPIRE_DAYS",
+        description="Refresh token expiration time in days",
+    )
+
+    # SMTP Settings for Email
+    SMTP_HOST: str = Field(
+        default="",
+        validation_alias="APP_SMTP_HOST",
+        description="SMTP server hostname",
+    )
+    SMTP_PORT: int = Field(
+        default=587,
+        validation_alias="APP_SMTP_PORT",
+        description="SMTP server port (587 for TLS, 465 for SSL)",
+    )
+    SMTP_USERNAME: str = Field(
+        default="",
+        validation_alias="APP_SMTP_USERNAME",
+        description="SMTP authentication username",
+    )
+    SMTP_PASSWORD: str = Field(
+        default="",
+        validation_alias="APP_SMTP_PASSWORD",
+        description="SMTP authentication password",
+    )
+    SMTP_FROM_EMAIL: str = Field(
+        default="noreply@devbin.dev",
+        validation_alias="APP_SMTP_FROM_EMAIL",
+        description="Email address for outgoing emails",
+    )
+    SMTP_FROM_NAME: str = Field(
+        default="DevBin",
+        validation_alias="APP_SMTP_FROM_NAME",
+        description="Display name for outgoing emails",
+    )
+    SMTP_USE_TLS: bool = Field(
+        default=True,
+        validation_alias="APP_SMTP_USE_TLS",
+        description="Use STARTTLS for SMTP connection",
+    )
+
+    # Frontend URL for email links
+    FRONTEND_URL: str = Field(
+        default="http://localhost:3000",
+        validation_alias="APP_FRONTEND_URL",
+        description="Frontend URL for email verification and password reset links",
+    )
+    EMAIL_VERIFY_PATH: str = Field(
+        default="/auth/verify-email",
+        validation_alias="APP_EMAIL_VERIFY_PATH",
+        description="Frontend path for email verification",
+    )
+    PASSWORD_RESET_PATH: str = Field(
+        default="/auth/reset-password",
+        validation_alias="APP_PASSWORD_RESET_PATH",
+        description="Frontend path for password reset",
+    )
+
+    # Email Token Expiration
+    EMAIL_VERIFICATION_EXPIRE_HOURS: int = Field(
+        default=24,
+        validation_alias="APP_EMAIL_VERIFICATION_EXPIRE_HOURS",
+        description="Email verification token expiration in hours",
+    )
+    PASSWORD_RESET_EXPIRE_HOURS: int = Field(
+        default=1,
+        validation_alias="APP_PASSWORD_RESET_EXPIRE_HOURS",
+        description="Password reset token expiration in hours",
+    )
+
+    # Auth Rate Limits
+    RATELIMIT_AUTH_REGISTER: RateLimit = Field(
+        default="5/hour",
+        validation_alias="APP_RATELIMIT_AUTH_REGISTER",
+        description="Rate limit for registration endpoint",
+    )
+    RATELIMIT_AUTH_LOGIN: RateLimit = Field(
+        default="10/minute",
+        validation_alias="APP_RATELIMIT_AUTH_LOGIN",
+        description="Rate limit for login endpoint",
+    )
+    RATELIMIT_AUTH_REFRESH: RateLimit = Field(
+        default="20/minute",
+        validation_alias="APP_RATELIMIT_AUTH_REFRESH",
+        description="Rate limit for token refresh endpoint",
+    )
+    RATELIMIT_AUTH_VERIFY_EMAIL: RateLimit = Field(
+        default="10/minute",
+        validation_alias="APP_RATELIMIT_AUTH_VERIFY_EMAIL",
+        description="Rate limit for email verification endpoint",
+    )
+    RATELIMIT_AUTH_RESEND_VERIFICATION: RateLimit = Field(
+        default="3/hour",
+        validation_alias="APP_RATELIMIT_AUTH_RESEND_VERIFICATION",
+        description="Rate limit for resend verification endpoint",
+    )
+    RATELIMIT_AUTH_FORGOT_PASSWORD: RateLimit = Field(
+        default="3/hour",
+        validation_alias="APP_RATELIMIT_AUTH_FORGOT_PASSWORD",
+        description="Rate limit for forgot password endpoint",
+    )
+    RATELIMIT_AUTH_RESET_PASSWORD: RateLimit = Field(
+        default="5/hour",
+        validation_alias="APP_RATELIMIT_AUTH_RESET_PASSWORD",
+        description="Rate limit for password reset endpoint",
+    )
+    RATELIMIT_AUTH_ME: RateLimit = Field(
+        default="60/minute",
+        validation_alias="APP_RATELIMIT_AUTH_ME",
+        description="Rate limit for user profile endpoint",
+    )
+    RATELIMIT_AUTH_LOGOUT: RateLimit = Field(
+        default="20/minute",
+        validation_alias="APP_RATELIMIT_AUTH_LOGOUT",
+        description="Rate limit for logout endpoint",
+    )
+
+    # Password Requirements
+    PASSWORD_MIN_LENGTH: int = Field(
+        default=8,
+        validation_alias="APP_PASSWORD_MIN_LENGTH",
+        description="Minimum password length",
+    )
+    PASSWORD_REQUIRE_UPPERCASE: bool = Field(
+        default=True,
+        validation_alias="APP_PASSWORD_REQUIRE_UPPERCASE",
+        description="Require at least one uppercase letter in password",
+    )
+    PASSWORD_REQUIRE_LOWERCASE: bool = Field(
+        default=True,
+        validation_alias="APP_PASSWORD_REQUIRE_LOWERCASE",
+        description="Require at least one lowercase letter in password",
+    )
+    PASSWORD_REQUIRE_DIGIT: bool = Field(
+        default=True,
+        validation_alias="APP_PASSWORD_REQUIRE_DIGIT",
+        description="Require at least one digit in password",
+    )
+    PASSWORD_REQUIRE_SPECIAL: bool = Field(
+        default=False,
+        validation_alias="APP_PASSWORD_REQUIRE_SPECIAL",
+        description="Require at least one special character in password",
+    )
 
     ENFORCE_HTTPS: bool = Field(
         default=False,
@@ -279,7 +507,9 @@ class Config(BaseSettings):
     def validate_compression_level(cls, level: int) -> int:
         """Validate compression level is in valid range."""
         if not 1 <= level <= 9:
-            logging.warning("Invalid compression level %d, must be 1-9. Using default 6.", level)
+            logging.warning(
+                "Invalid compression level %d, must be 1-9. Using default 6.", level
+            )
             return 6
         return level
 
@@ -287,7 +517,10 @@ class Config(BaseSettings):
     def validate_compression_threshold(cls, threshold: int) -> int:
         """Validate compression threshold is reasonable."""
         if threshold < 0:
-            logging.warning("Invalid compression threshold %d, must be >= 0. Using default 512.", threshold)
+            logging.warning(
+                "Invalid compression threshold %d, must be >= 0. Using default 512.",
+                threshold,
+            )
             return 512
         return threshold
 
@@ -296,7 +529,9 @@ class Config(BaseSettings):
         if self.ENVIRONMENT == "prod":
             # Production security validations
             if self.DEBUG:
-                logging.error("PRODUCTION ERROR: DEBUG mode is enabled in production. Set APP_DEBUG=false")
+                logging.error(
+                    "PRODUCTION ERROR: DEBUG mode is enabled in production. Set APP_DEBUG=false"
+                )
                 raise ValueError("DEBUG must be False in production")
 
             if "*" in self.CORS_DOMAINS:
@@ -324,6 +559,17 @@ class Config(BaseSettings):
                     "PRODUCTION WARNING: Metrics endpoint is not secured. "
                     "Set APP_METRICS_TOKEN to enable authentication for /metrics"
                 )
+
+            # Validate JWT secret key in production
+            if (
+                self.JWT_SECRET_KEY == "CHANGE_ME_IN_PRODUCTION_32_CHARS_MIN"
+                or len(self.JWT_SECRET_KEY) < 32
+            ):
+                logging.error(
+                    "PRODUCTION ERROR: JWT_SECRET_KEY must be changed and at least 32 characters. "
+                    "Set APP_JWT_SECRET_KEY to a secure random value"
+                )
+                raise ValueError("JWT_SECRET_KEY must be changed in production")
 
             logging.info("Production environment validated successfully")
 

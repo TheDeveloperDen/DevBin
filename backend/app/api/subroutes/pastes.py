@@ -9,6 +9,7 @@ from pydantic import UUID4
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 
+import app.ratelimit as ratelimit
 from app.api.dto.Error import ErrorResponse
 from app.api.dto.paste_dto import (
     CreatePaste,
@@ -19,8 +20,9 @@ from app.api.dto.paste_dto import (
 )
 from app.config import config
 from app.containers import Container
+from app.dependencies.auth import get_optional_current_user
 from app.exceptions import PasteNotFoundError
-from app.ratelimit import create_limit_resolver, get_exempt_key, limiter
+from app.ratelimit import create_auth_aware_key_func, create_auth_aware_limit_resolver, create_limit_resolver, limiter
 from app.services.paste_service import PasteService
 from app.utils.LRUMemoryCache import LRUMemoryCache
 from app.utils.metrics import cache_operations
@@ -43,6 +45,15 @@ def set_cache(cache_instance: "RedisCache | LRUMemoryCache"):
     cache = cache_instance
 
 
+async def _resolve_optional_user(
+    request: Request,
+    user=Depends(get_optional_current_user),
+):
+    """Resolve optional user and attach to request.state for rate limiter access."""
+    request.state.current_user = user
+    return user
+
+
 edit_token_key_header = APIKeyHeader(name="Authorization", scheme_name="Edit Token")
 delete_token_key_header = APIKeyHeader(name="Authorization", scheme_name="Delete Token")
 
@@ -53,7 +64,7 @@ delete_token_key_header = APIKeyHeader(name="Authorization", scheme_name="Delete
     summary="Get legacy Hastebin-format paste",
     description="Retrieve a paste stored in legacy Hastebin format by its ID.",
 )
-@limiter.limit(create_limit_resolver(config, "get_paste_legacy"), key_func=get_exempt_key)
+@limiter.limit(create_limit_resolver(config, "get_paste_legacy"), key_func=lambda r: ratelimit.get_exempt_key(r))
 @inject
 async def get_legacy_paste(
     request: Request,
@@ -96,7 +107,7 @@ async def get_legacy_paste(
     summary="Get paste by UUID",
     description="Retrieve a paste by its UUID identifier.",
 )
-@limiter.limit(create_limit_resolver(config, "get_paste"), key_func=get_exempt_key)
+@limiter.limit(create_limit_resolver(config, "get_paste"), key_func=lambda r: ratelimit.get_exempt_key(r))
 @inject
 async def get_paste_by_uuid(
     request: Request,
@@ -140,7 +151,7 @@ async def get_paste_by_uuid(
     summary="Get raw paste content",
     description="Retrieve only the raw text content of a paste. Useful for curl/wget users.",
 )
-@limiter.limit(create_limit_resolver(config, "get_paste"), key_func=get_exempt_key)
+@limiter.limit(create_limit_resolver(config, "get_paste"), key_func=lambda r: ratelimit.get_exempt_key(r))
 @inject
 async def get_paste_raw(
     request: Request,
@@ -189,12 +200,16 @@ async def get_paste_raw(
     summary="Create a new paste",
     description="Create a new paste with the provided content and metadata.",
 )
-@limiter.limit(create_limit_resolver(config, "create_paste"), key_func=get_exempt_key)
+@limiter.limit(
+    create_auth_aware_limit_resolver(config, "create_paste", "create_paste_authenticated"),
+    key_func=create_auth_aware_key_func(config),
+)
 @inject
 async def create_paste(
     request: Request,
     create_paste_body: CreatePaste,
     paste_service: PasteService = Depends(Provide[Container.paste_service]),
+    _current_user=Depends(_resolve_optional_user),
 ):
     """Create a new paste and return edit/delete tokens."""
     return await paste_service.create_paste(create_paste_body, request.state.user_metadata)
@@ -206,7 +221,7 @@ async def create_paste(
     summary="Edit an existing paste",
     description="Update a paste's content or metadata. Requires a valid edit token.",
 )
-@limiter.limit(create_limit_resolver(config, "edit_paste"), key_func=get_exempt_key)
+@limiter.limit(create_limit_resolver(config, "edit_paste"), key_func=lambda r: ratelimit.get_exempt_key(r))
 @inject
 async def edit_paste(
     request: Request,
@@ -230,7 +245,7 @@ async def edit_paste(
     summary="Delete a paste",
     description="Permanently delete a paste. Requires a valid delete token.",
 )
-@limiter.limit(create_limit_resolver(config, "delete_paste"), key_func=get_exempt_key)
+@limiter.limit(create_limit_resolver(config, "delete_paste"), key_func=lambda r: ratelimit.get_exempt_key(r))
 @inject
 async def delete_paste(
     request: Request,
