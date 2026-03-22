@@ -56,6 +56,15 @@ Full reference: [`docs/configuration.md`](docs/configuration.md)
 | `POST /pastes` | Create paste |
 | `GET /pastes/{id}` | Get paste |
 | `DELETE /pastes/{id}` | Delete paste |
+| `POST /auth/register` | Register a new user |
+| `POST /auth/login` | Authenticate and get tokens |
+| `POST /auth/refresh` | Refresh access token |
+| `POST /auth/verify-email` | Verify email address |
+| `POST /auth/resend-verification` | Resend verification email |
+| `POST /auth/forgot-password` | Request password reset |
+| `POST /auth/reset-password` | Reset password |
+| `GET /auth/me` | Get current user profile |
+| `POST /auth/logout` | Logout and revoke tokens |
 
 Interactive docs at `/docs` when running.
 
