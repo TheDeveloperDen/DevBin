@@ -53,8 +53,9 @@ Full reference: [`docs/configuration.md`](docs/configuration.md)
 |----------|-------------|
 | `GET /health` | Health check |
 | `GET /metrics` | Prometheus metrics |
-| `POST /pastes` | Create paste |
+| `POST /pastes` | Create paste (linked to account if authenticated) |
 | `GET /pastes/{id}` | Get paste |
+| `GET /pastes/me` | Get authenticated user's pastes |
 | `DELETE /pastes/{id}` | Delete paste |
 | `POST /auth/register` | Register a new user |
 | `POST /auth/login` | Authenticate and get tokens |

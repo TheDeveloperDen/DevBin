@@ -20,7 +20,7 @@ from app.api.dto.paste_dto import (
 )
 from app.config import config
 from app.containers import Container
-from app.dependencies.auth import get_optional_current_user
+from app.dependencies.auth import get_current_user, get_optional_current_user
 from app.exceptions import PasteNotFoundError
 from app.ratelimit import create_auth_aware_key_func, create_auth_aware_limit_resolver, create_limit_resolver, limiter
 from app.services.paste_service import PasteService
@@ -56,6 +56,23 @@ async def _resolve_optional_user(
 
 edit_token_key_header = APIKeyHeader(name="Authorization", scheme_name="Edit Token")
 delete_token_key_header = APIKeyHeader(name="Authorization", scheme_name="Delete Token")
+
+
+@pastes_route.get(
+    "/me",
+    response_model=list[PasteResponse],
+    summary="Get pastes for the authenticated user",
+    description="Retrieve all pastes created by the currently authenticated user.",
+)
+@limiter.limit(create_limit_resolver(config, "get_paste"), key_func=lambda r: ratelimit.get_exempt_key(r))
+@inject
+async def get_user_pastes(
+    request: Request,
+    paste_service: PasteService = Depends(Provide[Container.paste_service]),
+    current_user=Depends(get_current_user),
+):
+    """Get all pastes belonging to the authenticated user."""
+    return await paste_service.get_user_pastes(current_user.id)
 
 
 @pastes_route.get(
@@ -212,7 +229,12 @@ async def create_paste(
     _current_user=Depends(_resolve_optional_user),
 ):
     """Create a new paste and return edit/delete tokens."""
-    return await paste_service.create_paste(create_paste_body, request.state.user_metadata)
+    user = request.state.current_user
+    return await paste_service.create_paste(
+        create_paste_body,
+        request.state.user_metadata,
+        user_id=user.id if user else None,
+    )
 
 
 @pastes_route.put(

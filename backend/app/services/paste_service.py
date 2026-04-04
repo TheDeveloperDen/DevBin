@@ -240,6 +240,7 @@ class PasteService:
             paste_operations.labels(operation="get", status="success").inc()
             return PasteResponse(
                 id=result.id,
+                user_id=result.user_id,
                 title=result.title,
                 content=content,
                 content_language=PasteContentLanguage(result.content_language),
@@ -326,6 +327,7 @@ class PasteService:
             paste_operations.labels(operation="edit", status="success").inc()
             return PasteResponse(
                 id=result.id,
+                user_id=result.user_id,
                 title=result.title,
                 content=content,
                 content_language=PasteContentLanguage(result.content_language),
@@ -380,7 +382,7 @@ class PasteService:
                 counter.dec()
             return True
 
-    async def create_paste(self, paste: CreatePaste, user_data: UserMetaData) -> PasteResponse:
+    async def create_paste(self, paste: CreatePaste, user_data: UserMetaData, user_id: uuid.UUID | None = None) -> PasteResponse:
         if not self.verify_storage_limit():
             paste_operations.labels(operation="create", status="storage_limit").inc()
             raise HTTPException(
@@ -426,6 +428,7 @@ class PasteService:
                     original_size=original_size,
                     edit_token=edit_token_hashed,
                     delete_token=delete_token_hashed,
+                    user_id=user_id,
                 )
                 session.add(entity)
                 await session.commit()
@@ -442,6 +445,7 @@ class PasteService:
 
                 return CreatePasteResponse(
                     id=entity.id,
+                    user_id=entity.user_id,
                     title=entity.title,
                     content=paste.content,
                     content_language=PasteContentLanguage(entity.content_language),
@@ -460,3 +464,39 @@ class PasteService:
                 detail="Failed to create paste",
                 headers={"Retry-After": "60"},
             ) from exc
+
+    async def get_user_pastes(self, user_id: uuid.UUID) -> list[PasteResponse]:
+        async with self.session_maker() as session:
+            stmt = (
+                select(PasteEntity)
+                .where(
+                    PasteEntity.user_id == user_id,
+                    PasteEntity.deleted_at.is_(None),
+                    or_(
+                        PasteEntity.expires_at > datetime.now(tz=UTC),
+                        PasteEntity.expires_at.is_(None),
+                    ),
+                )
+                .order_by(PasteEntity.created_at.desc())
+            )
+            results = (await session.execute(stmt)).scalars().all()
+
+            pastes = []
+            for result in results:
+                content = await self._read_content(
+                    result.content_path,
+                    is_compressed=result.is_compressed,
+                )
+                pastes.append(
+                    PasteResponse(
+                        id=result.id,
+                        user_id=result.user_id,
+                        title=result.title,
+                        content=content,
+                        content_language=PasteContentLanguage(result.content_language),
+                        created_at=result.created_at,
+                        expires_at=result.expires_at,
+                        last_updated_at=result.last_updated_at,
+                    )
+                )
+            return pastes

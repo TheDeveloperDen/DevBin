@@ -23,6 +23,7 @@ class PasteEntity(Base):
         Index("idx_pastes_expires_at", "expires_at"),
         Index("idx_pastes_deleted_at", "deleted_at"),
         Index("idx_pastes_created_at", "created_at"),
+        Index("idx_pastes_user_id", "user_id"),
     )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=UUID_DEFAULT)
@@ -46,6 +47,12 @@ class PasteEntity(Base):
 
     delete_token = Column(String)
     deleted_at = Column(TIMESTAMP(timezone=True), nullable=True)
+
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+
+    user = relationship("UserEntity", back_populates="pastes")
 
     def __repr__(self):
         return f"<Paste(id={self.id}, title='{self.title}')>"
@@ -95,6 +102,7 @@ class UserEntity(Base):
     refresh_tokens = relationship(
         "RefreshTokenEntity", back_populates="user", cascade="all, delete-orphan"
     )
+    pastes = relationship("PasteEntity", back_populates="user")
 
     def __repr__(self):
         return f"<User(id={self.id}, username='{self.username}')>"
