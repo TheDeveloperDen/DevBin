@@ -120,3 +120,94 @@ class CacheError(DevBinException):
             status_code=500,
         )
         self.operation = operation
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Authentication Exceptions
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class UserNotFoundError(DevBinException):
+    """Raised when a user does not exist."""
+
+    def __init__(self, identifier: str = "user"):
+        super().__init__(
+            message=f"User '{identifier}' not found",
+            status_code=404,
+        )
+        self.identifier = identifier
+
+
+class UserAlreadyExistsError(DevBinException):
+    """Raised when attempting to create a user that already exists."""
+
+    def __init__(self, field: str = "username or email"):
+        super().__init__(
+            message=f"User with this {field} already exists",
+            status_code=409,
+        )
+        self.field = field
+
+
+class EmailNotVerifiedError(DevBinException):
+    """Raised when user attempts to login without verified email."""
+
+    def __init__(self):
+        super().__init__(
+            message="Email address has not been verified",
+            status_code=403,
+        )
+
+
+class InvalidCredentialsError(DevBinException):
+    """Raised when login credentials are invalid."""
+
+    def __init__(self):
+        super().__init__(
+            message="Invalid username or password",
+            status_code=401,
+        )
+
+
+class TokenExpiredError(DevBinException):
+    """Raised when a token has expired."""
+
+    def __init__(self, token_type: str = "token"):
+        super().__init__(
+            message=f"The {token_type} has expired",
+            status_code=401,
+        )
+        self.token_type = token_type
+
+
+class InvalidJWTError(DevBinException):
+    """Raised when JWT token is invalid or malformed."""
+
+    def __init__(self, reason: str = "Invalid token"):
+        super().__init__(
+            message=reason,
+            status_code=401,
+        )
+        self.reason = reason
+
+
+class PasswordValidationError(DevBinException):
+    """Raised when password does not meet requirements."""
+
+    def __init__(self, requirements: list[str]):
+        message = "Password does not meet requirements: " + ", ".join(requirements)
+        super().__init__(
+            message=message,
+            status_code=400,
+        )
+        self.requirements = requirements
+
+
+class UserInactiveError(DevBinException):
+    """Raised when user account is deactivated."""
+
+    def __init__(self):
+        super().__init__(
+            message="User account is inactive",
+            status_code=403,
+        )

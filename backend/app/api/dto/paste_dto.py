@@ -82,6 +82,10 @@ class PasteResponse(BaseModel):
     id: UUID4 = Field(
         description="The unique identifier of the paste",
     )
+    user_id: UUID4 | None = Field(
+        None,
+        description="The ID of the user who created the paste (null if anonymous)",
+    )
     title: str = Field(
         description="The title of the paste",
     )
