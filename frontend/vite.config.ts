@@ -4,12 +4,12 @@ import { defineConfig } from "vite";
 import { rollupWasm } from "@ethercorps/sveltekit-og/plugin";
 import { sveltekitOG } from "@ethercorps/sveltekit-og/plugin";
 
+console.log(process.env.ALLOWED_HOSTS);
 export default defineConfig({
   server: {
     port: parseInt(process.env.PORT || "3000"),
     allowedHosts: [
-      "73e9cd75c0f1.ngrok-free.app",
-      "sustainability-odds-undo-knows.trycloudflare.com",
+      "techno-blink-fields-details.trycloudflare.com"
     ],
   },
   build: {

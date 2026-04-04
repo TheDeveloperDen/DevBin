@@ -1,4 +1,4 @@
-// general types and decontstucted types to reduce complexity
+// general types and destructured types to reduce complexity
 import * as ApiService from "../client";
 
 export type ExpiryValues = "never" | "5m" | "15m" | "30m" | "1h" | "3h" | "1d";

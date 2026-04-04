@@ -1,13 +1,13 @@
-import { API_URL } from "$env/static/private";
 import { ApiService } from "$lib/api";
 import type { Paste } from "$lib/types";
-import { env } from "$env/dynamic/private";
 import { getUserIpAddress } from "$lib/utils/ip";
 import type { Actions } from "./$types";
 import { fail, redirect } from "@sveltejs/kit";
+import { env } from "$env/dynamic/private";
 
 export async function load({ params, request, getClientAddress, cookies }) {
   const client_ip = getUserIpAddress(request, getClientAddress);
+  console.log("client ip:", client_ip);
   const { id: paste_id } = params;
   let tokens: { edit_token: string; delete_token: string } = {
     edit_token: "",
@@ -89,6 +89,7 @@ export const actions = {
     }
 
     const response = await ApiService.editPastePastesPasteIdPut({
+      baseUrl: env.API_URL,
       path: {
         paste_id,
       },
@@ -132,6 +133,7 @@ export const actions = {
     }
 
     const response = await ApiService.deletePastePastesPasteIdDelete({
+      baseUrl: env.API_URL,
       path: {
         paste_id,
       },
