@@ -4,9 +4,11 @@
     import { goto } from "$app/navigation";
     import CodeEditor from "$lib/components/code-editor.svelte";
     import { getLanguageExtension, languageMap } from "$lib/editor-lang";
+    import { page } from "$app/state";
+    import { PUBLIC_CONTENT_CHARACTER_LIMIT } from "$env/static/public";
 
     const ERROR_CLEAR_TIMEOUT = 2500;
-    const MAX_PASTE_CONTENT_LENGTH = 10000;
+    const MAX_PASTE_CONTENT_LENGTH = PUBLIC_CONTENT_CHARACTER_LIMIT;
 
     let { form }: PageProps = $props();
 
@@ -25,6 +27,14 @@
         return () => (errorTimeout = null);
     });
 </script>
+
+<svelte:head>
+    <meta property="og:image" content={page.url.origin + "/devbin-logo.png"} />
+    <meta
+        property="og:description"
+        content="Paste website for the DevDen discord server"
+    />
+</svelte:head>
 
 <form
     method="POST"
