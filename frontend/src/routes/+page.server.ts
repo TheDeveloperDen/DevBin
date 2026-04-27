@@ -25,7 +25,6 @@ export const actions = {
         content_language: content_language.trim(),
         content: content.trim(),
       };
-      console.log(cleanedformData);
 
       // validate
       if (!cleanedformData.title) {

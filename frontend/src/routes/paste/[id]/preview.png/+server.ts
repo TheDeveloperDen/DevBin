@@ -8,6 +8,11 @@ import { languageMap } from "$lib/editor-lang";
 import sharp from "sharp";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import { read } from "$app/server";
+// import font path from lib
+import CascadiaCodePath from "$lib/assets/fonts/CascadiaCode-VariableFont_wght.ttf?url";
 
 const SCALE = 2;
 const WIDTH = 1200;
@@ -22,10 +27,13 @@ const CODE_X = GUTTER_W + 12;
 const CODE_Y = HEADER_H + FONT_SIZE + 8;
 const FADE_H = 10;
 const MAX_LINES = Math.floor((HEIGHT - CODE_Y - FADE_H) / LINE_HEIGHT);
+const FONT_PATH = "CascadiaCode-VariableFont_wght.ttf";
 const FONT = "Cascadia Code";
 const THEME = "ayu-dark";
 
 let highlighter: Highlighter;
+
+let fontBase64Cache: string | null | undefined = undefined;
 
 async function getHighlighter() {
   if (!highlighter) {
@@ -50,24 +58,28 @@ function escapeXml(str: string) {
     .replace(/'/g, "&apos;");
 }
 
-function loadFontBase64(path: string): string | null {
+async function loadFontBase64(relativePath: string): Promise<string | null> {
+  if (fontBase64Cache !== undefined) return fontBase64Cache;
   try {
-    return readFileSync(resolve("static", path)).toString("base64");
-  } catch {
-    return null;
+    // read resolves server directories for svelte because static path is not always guaranteed
+    const response = read(CascadiaCodePath);
+    const buffer = await response.arrayBuffer();
+    fontBase64Cache = Buffer.from(buffer).toString("base64");
+  } catch (e) {
+    console.warn("Could not load font:", e);
+    fontBase64Cache = null;
   }
+  return fontBase64Cache;
 }
 
-function buildSvg(
+async function buildSvg(
   title: string,
   language: string,
   tokens: ReturnType<Highlighter["codeToTokens"]>,
-) {
+): Promise<string> {
   const fg = tokens.fg ?? "#e6edf3";
-  const fontBase64 = loadFontBase64("fonts/CascadiaCode-VariableFont_wght.ttf");
-  const filename = escapeXml(
-    `${title}.${language}`,
-  );
+  const fontBase64 = await loadFontBase64(FONT_PATH);
+  const filename = escapeXml(`${title}.${language}`);
 
   let codeRows = "";
   tokens.tokens.forEach((lineTokens, i) => {
@@ -87,7 +99,7 @@ function buildSvg(
       codeRows += `<text y="${y}" font-family="${FONT},monospace" font-size="${FONT_SIZE}" xml:space="preserve">${tspans}</text>`;
     }
   });
-  
+
   return `<svg width="${WIDTH * SCALE}" height="${HEIGHT * SCALE}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     ${fontBase64 ? `<style>@font-face { font-family: "${FONT}"; src: url("data:font/truetype;base64,${fontBase64}") format("truetype"); }</style>` : ""}
@@ -146,7 +158,7 @@ export const GET: RequestHandler = async ({
   const lines =
     allLines.length <= MAX_LINES ? allLines : allLines.slice(0, MAX_LINES);
   const tokens = h.codeToTokens(lines.join("\n"), { lang, theme: THEME });
-  const svg = buildSvg(title, language, tokens);
+  const svg = await buildSvg(title, language, tokens);
 
   const png = await sharp(Buffer.from(svg))
     .resize(WIDTH, HEIGHT, { kernel: sharp.kernel.lanczos3 })
