@@ -28,7 +28,8 @@ class CreatePaste(BaseModel):
         max_length=config.MAX_CONTENT_LENGTH,
         description="The content of the paste",
     )
-    content_language: PasteContentLanguage = Field(
+    content_language: str = Field(
+        min_length=1,
         description="The language of the content",
         default=PasteContentLanguage.plain_text,
         examples=[PasteContentLanguage.plain_text],
@@ -63,8 +64,9 @@ class EditPaste(BaseModel):
         max_length=config.MAX_CONTENT_LENGTH,
         description="The content of the paste",
     )
-    content_language: PasteContentLanguage | None = Field(
+    content_language: str | None = Field(
         None,
+        min_length=1,
         description="The language of the content",
         examples=[PasteContentLanguage.plain_text],
     )
@@ -88,7 +90,7 @@ class PasteResponse(BaseModel):
     content: str | None = Field(
         description="The content of the paste, possible null if the content couldnt be read.",
     )
-    content_language: PasteContentLanguage = Field(
+    content_language: str | None = Field(
         description="The language of the content",
     )
     expires_at: datetime | None = Field(

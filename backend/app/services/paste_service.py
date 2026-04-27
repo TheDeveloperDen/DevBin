@@ -242,7 +242,7 @@ class PasteService:
                 id=result.id,
                 title=result.title,
                 content=content,
-                content_language=PasteContentLanguage(result.content_language),
+                content_language=result.content_language,
                 created_at=result.created_at,
                 expires_at=result.expires_at,
                 last_updated_at=result.last_updated_at,
@@ -288,7 +288,7 @@ class PasteService:
             if edit_paste.title is not None:  # Using ellipsis as sentinel for "not provided"
                 result.title = edit_paste.title
             if edit_paste.content_language is not None:
-                result.content_language = edit_paste.content_language.value
+                result.content_language = edit_paste.content_language
             if edit_paste.is_expires_at_set():
                 result.expires_at = edit_paste.expires_at
 
@@ -328,7 +328,7 @@ class PasteService:
                 id=result.id,
                 title=result.title,
                 content=content,
-                content_language=PasteContentLanguage(result.content_language),
+                content_language=result.content_language,
                 expires_at=result.expires_at,
                 created_at=result.created_at,
                 last_updated_at=result.last_updated_at,
@@ -417,7 +417,7 @@ class PasteService:
                     id=paste_id,
                     title=paste.title,
                     content_path=paste_path,
-                    content_language=paste.content_language.value,
+                    content_language=paste.content_language,
                     expires_at=paste.expires_at,
                     creator_ip=str(user_data.ip),
                     creator_user_agent=user_data.user_agent,
@@ -444,7 +444,7 @@ class PasteService:
                     id=entity.id,
                     title=entity.title,
                     content=paste.content,
-                    content_language=PasteContentLanguage(entity.content_language),
+                    content_language=entity.content_language,
                     created_at=entity.created_at,
                     last_updated_at=entity.last_updated_at,
                     expires_at=entity.expires_at,
