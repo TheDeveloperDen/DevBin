@@ -5,10 +5,11 @@
     import CodeEditor from "$lib/components/code-editor.svelte";
     import { getLanguageExtension, languageMap } from "$lib/editor-lang";
     import { page } from "$app/state";
-    import { PUBLIC_CONTENT_CHARACTER_LIMIT } from "$env/static/public";
+    import { env } from "$env/dynamic/public";
 
     const ERROR_CLEAR_TIMEOUT = 2500;
-    const MAX_PASTE_CONTENT_LENGTH = PUBLIC_CONTENT_CHARACTER_LIMIT;
+    const MAX_PASTE_CONTENT_LENGTH =
+        env.PUBLIC_CONTENT_CHARACTER_LIMIT || 100000;
 
     let { form }: PageProps = $props();
 
