@@ -4,18 +4,123 @@ import type { Paste } from "$lib/types";
 import { env } from "$env/dynamic/private";
 import { getUserIpAddress } from "$lib/utils/ip";
 import { createHighlighter, type Highlighter } from "shiki";
+import { languageMap } from "$lib/editor-lang";
 import sharp from "sharp";
+import { readFileSync } from "fs";
+import { resolve } from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import { read } from "$app/server";
+// import font path from lib
+import CascadiaCodePath from "$lib/assets/fonts/CascadiaCode-VariableFont_wght.ttf?url";
+
+const SCALE = 2;
+const WIDTH = 1200;
+const HEIGHT = 630;
+const BG = "#0d1117";
+const HEADER_H = 70;
+const FONT_SIZE = 13;
+const LINE_HEIGHT = 20;
+const CHAR_WIDTH = FONT_SIZE * 0.601;
+const GUTTER_W = 52;
+const CODE_X = GUTTER_W + 12;
+const CODE_Y = HEADER_H + FONT_SIZE + 8;
+const FADE_H = 10;
+const MAX_LINES = Math.floor((HEIGHT - CODE_Y - FADE_H) / LINE_HEIGHT);
+const FONT_PATH = "CascadiaCode-VariableFont_wght.ttf";
+const FONT = "Cascadia Code";
+const THEME = "ayu-dark";
 
 let highlighter: Highlighter;
+
+let fontBase64Cache: string | null | undefined = undefined;
 
 async function getHighlighter() {
   if (!highlighter) {
     highlighter = await createHighlighter({
-      themes: ["github-dark"],
-      langs: ["yaml", "typescript", "javascript", "python", "json"],
+      themes: [THEME],
+      langs: Object.keys(languageMap).filter((l) => l !== "plain_text"),
     });
   }
   return highlighter;
+}
+
+function expandTabs(str: string, size = 2) {
+  return str.replace(/\t/g, " ".repeat(size));
+}
+
+function escapeXml(str: string) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+async function loadFontBase64(relativePath: string): Promise<string | null> {
+  if (fontBase64Cache !== undefined) return fontBase64Cache;
+  try {
+    // read resolves server directories for svelte because static path is not always guaranteed
+    const response = read(CascadiaCodePath);
+    const buffer = await response.arrayBuffer();
+    fontBase64Cache = Buffer.from(buffer).toString("base64");
+  } catch (e) {
+    console.warn("Could not load font:", e);
+    fontBase64Cache = null;
+  }
+  return fontBase64Cache;
+}
+
+async function buildSvg(
+  title: string,
+  language: string,
+  tokens: ReturnType<Highlighter["codeToTokens"]>,
+): Promise<string> {
+  const fg = tokens.fg ?? "#e6edf3";
+  const fontBase64 = await loadFontBase64(FONT_PATH);
+  const filename = escapeXml(`${title}.${language}`);
+
+  let codeRows = "";
+  tokens.tokens.forEach((lineTokens, i) => {
+    const y = CODE_Y + i * LINE_HEIGHT;
+    let x = CODE_X;
+    let tspans = "";
+
+    codeRows += `<text x="${GUTTER_W}" y="${y}" fill="#484f58" font-family="${FONT},monospace" font-size="${FONT_SIZE}" text-anchor="end">${i + 1}</text>`;
+
+    for (const token of lineTokens) {
+      const text = expandTabs(token.content);
+      tspans += `<tspan x="${x}" fill="${token.color ?? fg}">${escapeXml(text)}</tspan>`;
+      x += text.length * CHAR_WIDTH;
+    }
+
+    if (tspans) {
+      codeRows += `<text y="${y}" font-family="${FONT},monospace" font-size="${FONT_SIZE}" xml:space="preserve">${tspans}</text>`;
+    }
+  });
+
+  return `<svg width="${WIDTH * SCALE}" height="${HEIGHT * SCALE}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    ${fontBase64 ? `<style>@font-face { font-family: "${FONT}"; src: url("data:font/truetype;base64,${fontBase64}") format("truetype"); }</style>` : ""}
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${BG}" stop-opacity="0"/>
+      <stop offset="100%" stop-color="${BG}" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="${WIDTH}" height="${HEIGHT}" fill="${BG}"/>
+  <rect width="${WIDTH}" height="${HEADER_H}" fill="#161b22"/>
+
+  <text x="${WIDTH / 2}" y="${HEADER_H / 2 + 5}" fill="#8b949e" font-family="${FONT},monospace" font-size="13" text-anchor="middle">${filename}</text>
+
+  <line x1="0" y1="${HEADER_H}" x2="${WIDTH}" y2="${HEADER_H}" stroke="#30363d" stroke-width="1"/>
+  <line x1="${GUTTER_W + 6}" y1="${HEADER_H}" x2="${GUTTER_W + 6}" y2="${HEIGHT}" stroke="#21262d" stroke-width="1"/>
+
+  ${codeRows}
+
+  <rect x="0" y="${HEIGHT - 110}" width="${WIDTH}" height="${110}" fill="url(#fade)"/>
+</svg>`;
 }
 
 export const GET: RequestHandler = async ({
@@ -23,93 +128,44 @@ export const GET: RequestHandler = async ({
   request,
   getClientAddress,
 }) => {
-  const client_ip = getUserIpAddress(request, getClientAddress);
   const { id } = params;
-  let title = "DevBin";
-  let content = "";
-  let content_language = "yaml";
+  const clientIp = getUserIpAddress(request, getClientAddress);
 
-  // 1. Fetch Paste Data
+  let title = "DevBin";
+  let content = "// no content";
+  let language = "yaml";
+
   if (id) {
-    const response = await ApiService.getPasteByUuidPastesPasteIdGet({
+    const { data } = await ApiService.getPasteByUuidPastesPasteIdGet({
       baseUrl: env.API_URL,
       path: { paste_id: id },
-      headers: { "X-Forwarded-For": client_ip },
+      headers: { "X-Forwarded-For": clientIp },
     });
-    if (response.data) {
-      const data = response.data as Paste;
-      title = data.title || "DevBin";
-      content = data.content;
-      content_language = data.content_language;
+    if (data) {
+      const paste = data as Paste;
+      title = paste.title || "DevBin";
+      content = paste.content;
+      language = paste.content_language;
     }
   }
 
   const h = await getHighlighter();
-  // Increase line count slightly to match the editor screenshot density
-  const linesToRender = content.split("\n").slice(0, 22);
-  const tokenResult = h.codeToTokens(linesToRender.join("\n"), {
-    lang: "yaml",
-    theme: "github-dark",
-  });
+  const lang = h.getLoadedLanguages().includes(language as any)
+    ? (language as any)
+    : "text";
 
-  const defaultColor = tokenResult.fg || "#e6edf3";
-  const lineHeight = 26;
-  const charWidth = 9.6; // Calculated for 16px monospace
-  const startY = 110;
-  const codeStartX = 75;
+  const allLines = content.split("\n").map(expandTabs);
+  const lines =
+    allLines.length <= MAX_LINES ? allLines : allLines.slice(0, MAX_LINES);
+  const tokens = h.codeToTokens(lines.join("\n"), { lang, theme: THEME });
+  const svg = await buildSvg(title, language, tokens);
 
-  let codeLinesSvg = "";
-  tokenResult.tokens.forEach((line, i) => {
-    const y = startY + i * lineHeight;
+  const png = await sharp(Buffer.from(svg))
+    .resize(WIDTH, HEIGHT, { kernel: sharp.kernel.lanczos3 })
+    .png({ compressionLevel: 9 })
+    .toBuffer();
 
-    // Active Line Highlight (matching line 16 in your screenshot)
-    if (i + 1 === 16) {
-      codeLinesSvg += `<rect x="0" y="${y - 19}" width="1200" height="${lineHeight}" fill="#21262d" opacity="0.4" />`;
-    }
-
-    // Line Number
-    codeLinesSvg += `<text x="35" y="${y}" fill="#484f58" font-family="monospace" font-size="14" text-anchor="end">${i + 1}</text>`;
-
-    // Block Folding Icon (v)
-    const lineStr = line.map((t) => t.content).join("");
-    if (lineStr.trim().endsWith(":")) {
-      codeLinesSvg += `<text x="48" y="${y - 1}" fill="#484f58" font-family="monospace" font-size="12">v</text>`;
-    }
-
-    // Code Content with precise spacing
-    let currentX = codeStartX;
-    line.forEach((token) => {
-      const escaped = token.content
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-
-      codeLinesSvg += `<text x="${currentX}" y="${y}" fill="${token.color || defaultColor}" font-family="monospace" font-size="16" xml:space="preserve">${escaped}</text>`;
-
-      // Advance X based on character count to fix tab/space issues
-      currentX += token.content.length * charWidth;
-    });
-  });
-
-  const svgTemplate = `
-    <svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
-        <rect width="1200" height="630" fill="#0d1117" />
-
-        <text x="600" y="40" fill="#e6edf3" font-family="sans-serif" font-weight="600" font-size="18" text-anchor="middle">${title}</text>
-        <line x1="0" y1="70" x2="1200" y2="70" stroke="#30363d" stroke-width="1" />
-
-        ${codeLinesSvg}
-
-        <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#0d1117" stop-opacity="0" />
-            <stop offset="100%" stop-color="#0d1117" stop-opacity="1" />
-        </linearGradient>
-        <rect x="0" y="520" width="1200" height="110" fill="url(#fade)" />
-    </svg>`;
-
-  const pngBuffer = await sharp(Buffer.from(svgTemplate)).png().toBuffer();
-
-  return new Response(pngBuffer, {
+  return new Response(png, {
     headers: {
       "Content-Type": "image/png",
       "Cache-Control": "public, max-age=3600",

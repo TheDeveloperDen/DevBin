@@ -8,9 +8,6 @@ console.log(process.env.ALLOWED_HOSTS);
 export default defineConfig({
   server: {
     port: parseInt(process.env.PORT || "3000"),
-    allowedHosts: [
-      "techno-blink-fields-details.trycloudflare.com"
-    ],
   },
   build: {
     rollupOptions: {

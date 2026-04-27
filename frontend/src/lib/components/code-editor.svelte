@@ -1,12 +1,12 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { EditorView } from "@codemirror/view";
-    import { basicSetup } from "codemirror";
     import { EditorState } from "@codemirror/state";
+    import { editorSetup } from "$lib/editor-setup";
     import { customTheme } from "$lib/editor-theme";
     import { getLanguageExtension, type LanguageType } from "$lib/editor-lang";
-    import { shikiToCodeMirror, updateEffect } from "@cmshiki/shiki";
-    import { getSingletonHighlighter } from "shiki";
+    import { shikiToCodeMirror } from "@cmshiki/shiki";
+    import { createOnigurumaEngine, getSingletonHighlighter } from "shiki";
 
     let {
         value = $bindable(""),
@@ -17,6 +17,13 @@
 
     let editorRef: HTMLDivElement;
     let view: EditorView | null = null;
+
+    // Cache the engine — creating it per-buildEditor call is wasteful
+    let enginePromise: ReturnType<typeof createOnigurumaEngine> | null = null;
+    function getEngine() {
+        enginePromise ??= createOnigurumaEngine(import("shiki/wasm"));
+        return enginePromise;
+    }
 
     async function getThemeBg(themeName: string): Promise<string> {
         const highlighter = await getSingletonHighlighter({
@@ -32,13 +39,14 @@
 
     async function buildEditor(doc: string) {
         const shikiLang = toShikiLang(language);
+
         const [bg, shikiResult] = await Promise.all([
             getThemeBg(theme),
             shikiLang
                 ? shikiToCodeMirror({
                       lang: shikiLang,
                       theme,
-                      engine: "javascript",
+                      engine: await getEngine(),
                   })
                 : Promise.resolve(null),
         ]);
@@ -53,7 +61,7 @@
             state: EditorState.create({
                 doc,
                 extensions: [
-                    basicSetup,
+                    editorSetup,
                     ...getLanguageExtension(language),
                     customTheme(bg),
                     themeExtension,
@@ -78,13 +86,10 @@
     });
 
     $effect(() => {
-        // reactive deps
         const _lang = language;
         const _theme = theme;
         const _editable = editable;
-
         if (!view) return;
-
         (async () => {
             const currentDoc = view!.state.doc.toString();
             view!.destroy();

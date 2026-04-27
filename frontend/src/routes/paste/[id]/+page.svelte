@@ -51,9 +51,24 @@
 
 <svelte:head>
     <title>DevBin | {data.title}</title>
+
     <meta property="og:title" content={`DevBin | ${data.title}`} />
     <meta
+        property="og:description"
+        content={`${data.title?.toLowerCase()}.${data.content_language}`}
+    />
+    <meta
         property="og:image"
+        content={page.url.origin + `/paste/${data.id}/preview.png`}
+    />
+
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+        name="twitter:image"
         content={page.url.origin + `/paste/${data.id}/preview.png`}
     />
 </svelte:head>
@@ -196,7 +211,8 @@
                 <CodeEditor
                     bind:value={editorValue}
                     editable={(!!data?.edit_token && isEditing) || false}
-                    language={"svelte"}
+                    language={(data?.content_language as LanguageType) ||
+                        "plain_text"}
                 />
             </div>
         {/if}

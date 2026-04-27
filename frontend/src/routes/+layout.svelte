@@ -9,12 +9,7 @@
 <svelte:head>
     <title>DevBin</title>
     <link rel="icon" href={favicon} />
-    <meta property="og:image" content={page.url.origin + "/devbin-logo.png"} />
     <meta property="og:title" content="DevBin" />
-    <meta
-        property="og:description"
-        content="Paste website for the DevDen discord server"
-    />
 </svelte:head>
 
 <main class="h-screen max-h-screen max-w-6xl flex flex-col mx-auto p-2">
