@@ -55,7 +55,7 @@
     <meta property="og:title" content={`DevBin | ${data.title}`} />
     <meta
         property="og:description"
-        content={`${data.title} · ${data.content_language}`}
+        content={`${data.title?.toLowerCase()}.${data.content_language}`}
     />
     <meta
         property="og:image"
