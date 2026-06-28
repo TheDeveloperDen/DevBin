@@ -1,6 +1,6 @@
 import logging
-from typing import TYPE_CHECKING
 import re
+from typing import TYPE_CHECKING
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
