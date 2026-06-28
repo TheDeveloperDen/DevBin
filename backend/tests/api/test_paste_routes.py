@@ -279,6 +279,11 @@ class TestPasteRawAPI:
         assert response.status_code == 200
         assert response.headers["content-type"] == "text/plain; charset=utf-8"
         assert response.text == "This is test content"
+        # New: ensure download header present
+        assert "content-disposition" in response.headers
+        cd = response.headers["content-disposition"]
+        assert "attachment" in cd
+        assert ".txt" in cd
 
     async def test_get_raw_paste_returns_404_for_nonexistent(self, test_client: AsyncClient, bypass_headers):
         """GET /pastes/{id}/raw should return 404 for non-existent paste."""
@@ -317,6 +322,8 @@ class TestPasteRawAPI:
 
         assert response.status_code == 200
         assert response.text == paste_data["content"]
+        # Ensure download header exists for unicode titles as well
+        assert "content-disposition" in response.headers
 
 
 @pytest.mark.asyncio
