@@ -1,5 +1,6 @@
 import logging
 from typing import TYPE_CHECKING
+import re
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends
@@ -161,9 +162,23 @@ async def get_paste_raw(
     cached_content = await cache.get(cache_key)
     if cached_content:
         cache_operations.labels(operation="get", result="hit").inc()
+        # Build a sanitized filename from the paste_id for cached responses
+        def _sanitize_filename(source: str) -> str:
+            name = re.sub(r"[^A-Za-z0-9 \-_.]", "", source)
+            name = re.sub(r"\s+", "_", name)
+            name = name.strip("_.")
+            name = name[:30]
+            if not name:
+                return str(paste_id)
+            return name
+
+        filename = f"{_sanitize_filename(str(paste_id))}.txt"
         return PlainTextResponse(
             content=cached_content,
-            headers={"Cache-Control": f"public, max-age={config.CACHE_TTL}"},
+            headers={
+                "Cache-Control": f"public, max-age={config.CACHE_TTL}",
+                "Content-Disposition": f'attachment; filename="{filename}"',
+            },
         )
 
     cache_operations.labels(operation="get", result="miss").inc()
@@ -177,9 +192,25 @@ async def get_paste_raw(
     await cache.set(cache_key, content, ttl=config.CACHE_TTL)
     cache_operations.labels(operation="set", result="success").inc()
 
+    # Sanitize filename from title (fallback to id)
+    def _sanitize_filename(source: str) -> str:
+        name = re.sub(r"[^A-Za-z0-9 \-_.]", "", source)
+        name = re.sub(r"\s+", "_", name)
+        name = name.strip("_.")
+        name = name[:30]
+        if not name:
+            return str(paste_id)
+        return name
+
+    filename_source = paste_result.title if paste_result.title else str(paste_result.id)
+    filename = f"{_sanitize_filename(str(filename_source))}.txt"
+
     return PlainTextResponse(
         content=content,
-        headers={"Cache-Control": f"public, max-age={config.CACHE_TTL}"},
+        headers={
+            "Cache-Control": f"public, max-age={config.CACHE_TTL}",
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
     )
 
 
