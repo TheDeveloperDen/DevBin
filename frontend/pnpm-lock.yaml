@@ -79,7 +79,7 @@ importers:
         version: 4.2.1(@sveltejs/kit@2.49.4(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.46.3)(vite@7.3.1(@types/node@25.0.8)(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.46.3)(typescript@5.9.3)(vite@7.3.1(@types/node@25.0.8)(jiti@2.6.1)(lightningcss@1.30.2)))
       '@fsegurai/codemirror-theme-abyss':
         specifier: ^6.2.3
-        version: 6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)
+        version: 6.2.7(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)
       '@fsegurai/codemirror-theme-monokai':
         specifier: ^6.2.3
         version: 6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)
@@ -409,8 +409,8 @@ packages:
     peerDependencies:
       '@sveltejs/kit': '>=2.0.0'
 
-  '@fsegurai/codemirror-theme-abyss@6.2.3':
-    resolution: {integrity: sha512-yU6lXHNM9mHGexMT9cNi45ma/vaXtPAwI8pP9yQt7M6Bh8WOeycDzd3WDpOcQaBleS26fCSfeNBdixhevP3Lbg==}
+  '@fsegurai/codemirror-theme-abyss@6.2.7':
+    resolution: {integrity: sha512-EdTJpAy+2Aj81+c8ttQEYB9KMj6bh/j+63/mmoHA1tHDH8PBudHX3N0lU7tzZhWEJHGAFfrAT+dvSdxQqzsvwA==}
     peerDependencies:
       '@codemirror/language': ^6.0.0
       '@codemirror/state': ^6.0.0
@@ -2177,7 +2177,7 @@ snapshots:
       std-env: 3.10.0
       unwasm: 0.5.3
 
-  '@fsegurai/codemirror-theme-abyss@6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)':
+  '@fsegurai/codemirror-theme-abyss@6.2.7(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)':
     dependencies:
       '@codemirror/language': 6.12.1
       '@codemirror/state': 6.5.3
