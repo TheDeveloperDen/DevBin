@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@babel/runtime':
         specifier: ^7.28.4
-        version: 7.28.6
+        version: 7.29.7
       '@cmshiki/shiki':
         specifier: ^0.2.0
         version: 0.2.0(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(shiki@3.21.0)
@@ -156,8 +156,8 @@ importers:
 
 packages:
 
-  '@babel/runtime@7.28.6':
-    resolution: {integrity: sha512-05WQkdpL9COIMz4LjTxGpPNCdlpyimKppYNoJ5Di5EUObifl8t4tuLuUBBZEpoLYOmfvIWrsp9fCl0HoPRVTdA==}
+  '@babel/runtime@7.29.7':
+    resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
     engines: {node: '>=6.9.0'}
 
   '@cmshiki/shiki@0.2.0':
@@ -1873,7 +1873,7 @@ packages:
 
 snapshots:
 
-  '@babel/runtime@7.28.6': {}
+  '@babel/runtime@7.29.7': {}
 
   '@cmshiki/shiki@0.2.0(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(shiki@3.21.0)':
     dependencies:
