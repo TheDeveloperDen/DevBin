@@ -13,7 +13,7 @@ importers:
         version: 7.28.6
       '@cmshiki/shiki':
         specifier: ^0.2.0
-        version: 0.2.0(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(shiki@3.21.0)
+        version: 0.2.0(@codemirror/state@6.7.4)(@codemirror/view@6.39.10)(shiki@3.21.0)
       '@codemirror/lang-angular':
         specifier: ^0.1.4
         version: 0.1.4
@@ -70,7 +70,7 @@ importers:
         version: 6.12.1
       '@codemirror/state':
         specifier: ^6.5.3
-        version: 6.5.3
+        version: 6.7.4
       '@codemirror/view':
         specifier: ^6.39.8
         version: 6.39.10
@@ -79,13 +79,13 @@ importers:
         version: 4.2.1(@sveltejs/kit@2.49.4(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.46.3)(vite@7.3.1(@types/node@25.0.8)(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.46.3)(typescript@5.9.3)(vite@7.3.1(@types/node@25.0.8)(jiti@2.6.1)(lightningcss@1.30.2)))
       '@fsegurai/codemirror-theme-abyss':
         specifier: ^6.2.3
-        version: 6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)
+        version: 6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.7.4)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)
       '@fsegurai/codemirror-theme-monokai':
         specifier: ^6.2.3
-        version: 6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)
+        version: 6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.7.4)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)
       '@fsegurai/codemirror-theme-tokyo-night-storm':
         specifier: ^6.2.3
-        version: 6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)
+        version: 6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.7.4)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)
       '@hey-api/openapi-ts':
         specifier: ^0.89.1
         version: 0.89.2(typescript@5.9.3)
@@ -94,7 +94,7 @@ importers:
         version: 1.2.3
       '@replit/codemirror-lang-csharp':
         specifier: ^6.2.0
-        version: 6.2.0(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/common@1.5.0)(@lezer/highlight@1.2.3)(@lezer/lr@1.4.7)
+        version: 6.2.0(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/state@6.7.4)(@codemirror/view@6.39.10)(@lezer/common@1.5.0)(@lezer/highlight@1.2.3)(@lezer/lr@1.4.7)
       axios:
         specifier: ^1.13.2
         version: 1.13.2
@@ -103,7 +103,7 @@ importers:
         version: 6.0.2
       codemirror-shiki:
         specifier: ^0.3.0
-        version: 0.3.0(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(shiki@3.21.0)
+        version: 0.3.0(@codemirror/state@6.7.4)(@codemirror/view@6.39.10)(shiki@3.21.0)
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
@@ -115,7 +115,7 @@ importers:
         version: 0.34.5
       thememirror:
         specifier: ^2.0.1
-        version: 2.0.1(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)
+        version: 2.0.1(@codemirror/language@6.12.1)(@codemirror/state@6.7.4)(@codemirror/view@6.39.10)
     devDependencies:
       '@sveltejs/adapter-auto':
         specifier: ^7.0.0
@@ -238,6 +238,9 @@ packages:
 
   '@codemirror/state@6.5.3':
     resolution: {integrity: sha512-MerMzJzlXogk2fxWFU1nKp36bY5orBG59HnPiz0G9nLRebWa0zXuv2siH6PLIHBvv5TH8CkQRqjBs0MlxCZu+A==}
+
+  '@codemirror/state@6.7.4':
+    resolution: {integrity: sha512-QhQIVRY+xHZDxwOSFrJ1eUMapJBUID3IdeAjf7dHO7zBUzSkyooHiodnalz5MG3iHzwixKMlAAyn7244y537EA==}
 
   '@codemirror/view@6.39.10':
     resolution: {integrity: sha512-QfT/PXhiiP76PxMnX0RQVPDQrqfRt9wr9QhInNHnEUu4PWoNS8QwwcIDEneXFChJv22y+Yu/Cz5lFMTPz+h16w==}
@@ -1875,10 +1878,10 @@ snapshots:
 
   '@babel/runtime@7.28.6': {}
 
-  '@cmshiki/shiki@0.2.0(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(shiki@3.21.0)':
+  '@cmshiki/shiki@0.2.0(@codemirror/state@6.7.4)(@codemirror/view@6.39.10)(shiki@3.21.0)':
     dependencies:
       '@cmshiki/utils': 0.2.0
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       '@shikijs/core': 3.21.0
       '@shikijs/vscode-textmate': 10.0.2
@@ -1895,14 +1898,14 @@ snapshots:
   '@codemirror/autocomplete@6.20.0':
     dependencies:
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       '@lezer/common': 1.5.0
 
   '@codemirror/commands@6.10.1':
     dependencies:
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       '@lezer/common': 1.5.0
 
@@ -1924,7 +1927,7 @@ snapshots:
     dependencies:
       '@codemirror/autocomplete': 6.20.0
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@lezer/common': 1.5.0
       '@lezer/css': 1.3.0
 
@@ -1932,7 +1935,7 @@ snapshots:
     dependencies:
       '@codemirror/autocomplete': 6.20.0
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@lezer/common': 1.5.0
       '@lezer/go': 1.0.1
 
@@ -1942,7 +1945,7 @@ snapshots:
       '@codemirror/lang-css': 6.3.1
       '@codemirror/lang-javascript': 6.2.4
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       '@lezer/common': 1.5.0
       '@lezer/css': 1.3.0
@@ -1958,7 +1961,7 @@ snapshots:
       '@codemirror/autocomplete': 6.20.0
       '@codemirror/language': 6.12.1
       '@codemirror/lint': 6.9.2
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       '@lezer/common': 1.5.0
       '@lezer/javascript': 1.5.4
@@ -1981,7 +1984,7 @@ snapshots:
       '@codemirror/autocomplete': 6.20.0
       '@codemirror/lang-html': 6.4.11
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       '@lezer/common': 1.5.0
       '@lezer/markdown': 1.6.3
@@ -1990,7 +1993,7 @@ snapshots:
     dependencies:
       '@codemirror/lang-html': 6.4.11
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@lezer/common': 1.5.0
       '@lezer/php': 1.0.5
 
@@ -1998,7 +2001,7 @@ snapshots:
     dependencies:
       '@codemirror/autocomplete': 6.20.0
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@lezer/common': 1.5.0
       '@lezer/python': 1.1.18
 
@@ -2011,7 +2014,7 @@ snapshots:
     dependencies:
       '@codemirror/lang-css': 6.3.1
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@lezer/common': 1.5.0
       '@lezer/sass': 1.1.0
 
@@ -2019,7 +2022,7 @@ snapshots:
     dependencies:
       '@codemirror/autocomplete': 6.20.0
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@lezer/common': 1.5.0
       '@lezer/highlight': 1.2.3
       '@lezer/lr': 1.4.7
@@ -2028,7 +2031,7 @@ snapshots:
     dependencies:
       '@codemirror/autocomplete': 6.20.0
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       '@lezer/common': 1.5.0
       '@lezer/xml': 1.0.6
@@ -2037,7 +2040,7 @@ snapshots:
     dependencies:
       '@codemirror/autocomplete': 6.20.0
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@lezer/common': 1.5.0
       '@lezer/highlight': 1.2.3
       '@lezer/lr': 1.4.7
@@ -2045,7 +2048,7 @@ snapshots:
 
   '@codemirror/language@6.12.1':
     dependencies:
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       '@lezer/common': 1.5.0
       '@lezer/highlight': 1.2.3
@@ -2054,13 +2057,13 @@ snapshots:
 
   '@codemirror/lint@6.9.2':
     dependencies:
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       crelt: 1.0.6
 
   '@codemirror/search@6.6.0':
     dependencies:
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       crelt: 1.0.6
 
@@ -2068,16 +2071,20 @@ snapshots:
     dependencies:
       '@marijn/find-cluster-break': 1.0.2
 
+  '@codemirror/state@6.7.4':
+    dependencies:
+      '@marijn/find-cluster-break': 1.0.2
+
   '@codemirror/view@6.39.10':
     dependencies:
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       crelt: 1.0.6
       style-mod: 4.1.3
       w3c-keyname: 2.2.8
 
   '@codemirror/view@6.39.9':
     dependencies:
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       crelt: 1.0.6
       style-mod: 4.1.3
       w3c-keyname: 2.2.8
@@ -2177,24 +2184,24 @@ snapshots:
       std-env: 3.10.0
       unwasm: 0.5.3
 
-  '@fsegurai/codemirror-theme-abyss@6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)':
+  '@fsegurai/codemirror-theme-abyss@6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.7.4)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)':
     dependencies:
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       '@lezer/highlight': 1.2.3
 
-  '@fsegurai/codemirror-theme-monokai@6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)':
+  '@fsegurai/codemirror-theme-monokai@6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.7.4)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)':
     dependencies:
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       '@lezer/highlight': 1.2.3
 
-  '@fsegurai/codemirror-theme-tokyo-night-storm@6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)':
+  '@fsegurai/codemirror-theme-tokyo-night-storm@6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.7.4)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)':
     dependencies:
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       '@lezer/highlight': 1.2.3
 
@@ -2439,11 +2446,11 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
-  '@replit/codemirror-lang-csharp@6.2.0(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/common@1.5.0)(@lezer/highlight@1.2.3)(@lezer/lr@1.4.7)':
+  '@replit/codemirror-lang-csharp@6.2.0(@codemirror/autocomplete@6.20.0)(@codemirror/language@6.12.1)(@codemirror/state@6.7.4)(@codemirror/view@6.39.10)(@lezer/common@1.5.0)(@lezer/highlight@1.2.3)(@lezer/lr@1.4.7)':
     dependencies:
       '@codemirror/autocomplete': 6.20.0
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       '@lezer/common': 1.5.0
       '@lezer/highlight': 1.2.3
@@ -2857,9 +2864,9 @@ snapshots:
 
   clsx@2.1.1: {}
 
-  codemirror-shiki@0.3.0(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(shiki@3.21.0):
+  codemirror-shiki@0.3.0(@codemirror/state@6.7.4)(@codemirror/view@6.39.10)(shiki@3.21.0):
     dependencies:
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
       shiki: 3.21.0
 
@@ -2870,7 +2877,7 @@ snapshots:
       '@codemirror/language': 6.12.1
       '@codemirror/lint': 6.9.2
       '@codemirror/search': 6.6.0
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
 
   color-name@1.1.4: {}
@@ -3495,10 +3502,10 @@ snapshots:
 
   tapable@2.3.0: {}
 
-  thememirror@2.0.1(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10):
+  thememirror@2.0.1(@codemirror/language@6.12.1)(@codemirror/state@6.7.4)(@codemirror/view@6.39.10):
     dependencies:
       '@codemirror/language': 6.12.1
-      '@codemirror/state': 6.5.3
+      '@codemirror/state': 6.7.4
       '@codemirror/view': 6.39.10
 
   tiny-inflate@1.0.3: {}
