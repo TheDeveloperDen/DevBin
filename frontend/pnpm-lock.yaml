@@ -82,7 +82,7 @@ importers:
         version: 6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)
       '@fsegurai/codemirror-theme-monokai':
         specifier: ^6.2.3
-        version: 6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)
+        version: 6.4.0(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)
       '@fsegurai/codemirror-theme-tokyo-night-storm':
         specifier: ^6.2.3
         version: 6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)
@@ -417,8 +417,16 @@ packages:
       '@codemirror/view': ^6.0.0
       '@lezer/highlight': ^1.0.0
 
-  '@fsegurai/codemirror-theme-monokai@6.2.3':
-    resolution: {integrity: sha512-kHiansKaONRuTU76zavJ9KRJnITbg6y6PXBVX0ZEUSf6WSdTAAgubYay+M6tVNMAirwAdkHnIjjZbh8GXeg01g==}
+  '@fsegurai/codemirror-theme-core@6.0.0':
+    resolution: {integrity: sha512-I36H/c2oC+hDjuScOUvZhMJ8L9PgT9iqK2e/OtsT+3NHFwj296bMlB2+FPlZnqwo+LQehUUmF1RJ3/gRnYwuWA==}
+    peerDependencies:
+      '@codemirror/language': ^6.0.0
+      '@codemirror/state': ^6.0.0
+      '@codemirror/view': ^6.0.0
+      '@lezer/highlight': ^1.0.0
+
+  '@fsegurai/codemirror-theme-monokai@6.4.0':
+    resolution: {integrity: sha512-AR+cC3auaGAJg58I3q6Sq4+PqmD/2zrcEyPyTr6wXyoKsZU6WgmfnUy+DlnMQpqa8P97knRjJebPR1+YaMg6bg==}
     peerDependencies:
       '@codemirror/language': ^6.0.0
       '@codemirror/state': ^6.0.0
@@ -2184,11 +2192,19 @@ snapshots:
       '@codemirror/view': 6.39.10
       '@lezer/highlight': 1.2.3
 
-  '@fsegurai/codemirror-theme-monokai@6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)':
+  '@fsegurai/codemirror-theme-core@6.0.0(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)':
     dependencies:
       '@codemirror/language': 6.12.1
       '@codemirror/state': 6.5.3
       '@codemirror/view': 6.39.10
+      '@lezer/highlight': 1.2.3
+
+  '@fsegurai/codemirror-theme-monokai@6.4.0(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)':
+    dependencies:
+      '@codemirror/language': 6.12.1
+      '@codemirror/state': 6.5.3
+      '@codemirror/view': 6.39.10
+      '@fsegurai/codemirror-theme-core': 6.0.0(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)
       '@lezer/highlight': 1.2.3
 
   '@fsegurai/codemirror-theme-tokyo-night-storm@6.2.3(@codemirror/language@6.12.1)(@codemirror/state@6.5.3)(@codemirror/view@6.39.10)(@lezer/highlight@1.2.3)':
